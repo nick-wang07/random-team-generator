@@ -35,6 +35,20 @@ function togglePresent(id, isPresent) {
 // id of the roster row currently in edit mode, or null. Not part of `state` —
 // it's transient UI state, not something that gets persisted.
 let editingId = null;
+// Live snapshot of the open editor's <input>, captured just before any
+// render() rebuilds the roster list out from under it. render() gets called
+// for lots of reasons unrelated to the edit in progress (a different row's
+// checkbox, adding a person, changing the team count) — without this, each
+// of those would silently reset the editor back to the persisted name.
+let editingDraft = null; // { value, selectionStart, selectionEnd } | null
+// Error message tied to the still-open editor (e.g. a rejected duplicate/empty
+// name). renderSetup() prefers this over the team-count validation message so
+// an incidental re-render doesn't clobber an error the host hasn't resolved yet.
+let editingError = null;
+// True only for the render() that first opens an editor, so the initial open
+// selects the whole name (for fast overtyping) without re-selecting-all — and
+// eating the next keystroke — on every incidental re-render while mid-typing.
+let editingJustOpened = false;
 
 function nameButton(person) {
   const button = document.createElement('button');
@@ -43,6 +57,9 @@ function nameButton(person) {
   button.textContent = person.name;
   button.addEventListener('click', () => {
     editingId = person.id;
+    editingDraft = null;
+    editingError = null;
+    editingJustOpened = true;
     render();
   });
   return button;
@@ -52,7 +69,7 @@ function nameEditor(person) {
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'name-edit';
-  input.value = person.name;
+  input.value = editingDraft ? editingDraft.value : person.name;
 
   // Guards against a commit firing twice: committing/cancelling detaches this
   // input via render(), and browsers fire a blur event on an element removed
@@ -65,11 +82,14 @@ function nameEditor(person) {
     try {
       state.roster = renamePerson(state.roster, person.id, input.value);
       editingId = null;
+      editingDraft = null;
+      editingError = null;
       persist();
       render();
     } catch (err) {
       // Leave the editor open with the typed text so the host can fix it.
       settled = false;
+      editingError = err.message;
       showError(err.message);
     }
   }
@@ -78,6 +98,8 @@ function nameEditor(person) {
     if (settled) return;
     settled = true;
     editingId = null;
+    editingDraft = null;
+    editingError = null;
     render();
   }
 
@@ -109,7 +131,11 @@ function rosterRow(person) {
   remove.type = 'button';
   remove.textContent = 'remove';
   remove.addEventListener('click', () => {
-    if (editingId === person.id) editingId = null;
+    if (editingId === person.id) {
+      editingId = null;
+      editingDraft = null;
+      editingError = null;
+    }
     state.roster = removePerson(state.roster, person.id);
     state.present = prunePresent(state.roster, state.present);
     persist();
@@ -122,6 +148,19 @@ function rosterRow(person) {
 
 function renderRoster() {
   const list = el('roster-list');
+  // Snapshot the live editor (value + caret) before it gets torn down, so an
+  // unrelated render() can restore it below instead of resetting to the
+  // persisted name.
+  if (editingId) {
+    const liveInput = list.querySelector('.name-edit');
+    if (liveInput) {
+      editingDraft = {
+        value: liveInput.value,
+        selectionStart: liveInput.selectionStart,
+        selectionEnd: liveInput.selectionEnd,
+      };
+    }
+  }
   list.replaceChildren();
   if (state.roster.length === 0) {
     const li = document.createElement('li');
@@ -135,9 +174,14 @@ function renderRoster() {
     const input = list.querySelector('.name-edit');
     if (input) {
       input.focus();
-      input.select();
+      if (editingJustOpened) {
+        input.select();
+      } else if (editingDraft && editingDraft.selectionStart != null) {
+        input.setSelectionRange(editingDraft.selectionStart, editingDraft.selectionEnd);
+      }
     }
   }
+  editingJustOpened = false;
 }
 
 function renderSetup() {
@@ -147,7 +191,9 @@ function renderSetup() {
     presentCount: state.present.length,
     teamCount: state.config.teamCount,
   });
-  showError(check.ok ? '' : check.reason);
+  // An unresolved editor error takes priority over the team-count message so
+  // an incidental re-render (checkbox, add, team count) doesn't erase it.
+  showError(editingId && editingError ? editingError : check.ok ? '' : check.reason);
   el('start-wheel-btn').disabled = !check.ok;
   el('start-draft-btn').disabled = !check.ok;
 }

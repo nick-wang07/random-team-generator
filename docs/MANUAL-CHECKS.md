@@ -5,7 +5,6 @@
 - [x] Adding a name puts it in the list and clears the input.
 - [x] Adding the same name in different case shows "already on the roster".
 - [x] Adding only whitespace shows "Name cannot be empty".
-- [x] Rename works; cancelling the prompt changes nothing.
 - [x] Removing a checked person leaves no ghost check-off behind.
 - [x] Two people checked with Teams at 2 enables both start buttons.
 - [x] Teams at 3 with two people checked disables them and reads
@@ -25,3 +24,9 @@
 - [x] Renaming to blank shows "Name cannot be empty" and leaves the editor open.
 - [x] Clicking the name does not toggle that row's checkbox.
 - [x] Tabbing to a name and pressing Enter opens the editor.
+- [x] Typing in an open editor, then toggling a different row's checkbox, leaves
+      the editor open with the typed text intact (not reset to the saved name).
+- [x] Typing a duplicate name, pressing Enter to get the "already on the roster"
+      error, then toggling a checkbox keeps the error and the typed text intact.
+- [x] Typing in an open editor, then changing the team count, leaves the typed
+      text intact.
