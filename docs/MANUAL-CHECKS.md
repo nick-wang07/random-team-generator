@@ -30,3 +30,10 @@
       error, then toggling a checkbox keeps the error and the typed text intact.
 - [x] Typing in an open editor, then changing the team count, leaves the typed
       text intact.
+- [x] With row A's editor open and erroring on a duplicate name, clicking row
+      B's name directly (no Escape first) opens B's editor with B's own
+      persisted name selected — never A's abandoned text — and A reverts to
+      its own persisted name.
+- [x] A failed "add a name" submission while a row's editor is showing a
+      rejected-name error displays the add error, not the stale editor error,
+      and that stale error does not resurface on the next unrelated render.

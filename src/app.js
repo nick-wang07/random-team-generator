@@ -40,7 +40,7 @@ let editingId = null;
 // for lots of reasons unrelated to the edit in progress (a different row's
 // checkbox, adding a person, changing the team count) — without this, each
 // of those would silently reset the editor back to the persisted name.
-let editingDraft = null; // { value, selectionStart, selectionEnd } | null
+let editingDraft = null; // { id, value, selectionStart, selectionEnd } | null
 // Error message tied to the still-open editor (e.g. a rejected duplicate/empty
 // name). renderSetup() prefers this over the team-count validation message so
 // an incidental re-render doesn't clobber an error the host hasn't resolved yet.
@@ -69,7 +69,11 @@ function nameEditor(person) {
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'name-edit';
-  input.value = editingDraft ? editingDraft.value : person.name;
+  // Tags which person this live input belongs to, so renderRoster()'s
+  // pre-rebuild snapshot never mistakes a different (possibly abandoned)
+  // row's leftover editor for the one that's actually still open.
+  input.dataset.personId = person.id;
+  input.value = editingDraft && editingDraft.id === person.id ? editingDraft.value : person.name;
 
   // Guards against a commit firing twice: committing/cancelling detaches this
   // input via render(), and browsers fire a blur event on an element removed
@@ -153,8 +157,15 @@ function renderRoster() {
   // persisted name.
   if (editingId) {
     const liveInput = list.querySelector('.name-edit');
-    if (liveInput) {
+    // Only trust this input if it actually belongs to the row we're still
+    // editing. A row whose commit failed (and therefore skipped render())
+    // can leave a stale, abandoned .name-edit for a DIFFERENT person in the
+    // DOM — e.g. row A errors and is left open, then the host clicks
+    // straight into row B's editor without resolving A first. Without this
+    // check, A's leftover text would leak into B's freshly-opened editor.
+    if (liveInput && liveInput.dataset.personId === editingId) {
       editingDraft = {
+        id: editingId,
         value: liveInput.value,
         selectionStart: liveInput.selectionStart,
         selectionEnd: liveInput.selectionEnd,
@@ -219,6 +230,10 @@ el('add-form').addEventListener('submit', (event) => {
     persist();
     render();
   } catch (err) {
+    // A stale open-editor error (if any) shouldn't silently resurface over
+    // this add-form error on the next incidental render — the host's
+    // attention is on the add form right now, not the abandoned editor.
+    editingError = null;
     showError(err.message);
   }
 });
