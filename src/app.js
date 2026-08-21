@@ -32,6 +32,69 @@ function togglePresent(id, isPresent) {
   render();
 }
 
+// id of the roster row currently in edit mode, or null. Not part of `state` —
+// it's transient UI state, not something that gets persisted.
+let editingId = null;
+
+function nameButton(person) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'name name-btn';
+  button.textContent = person.name;
+  button.addEventListener('click', () => {
+    editingId = person.id;
+    render();
+  });
+  return button;
+}
+
+function nameEditor(person) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'name-edit';
+  input.value = person.name;
+
+  // Guards against a commit firing twice: committing/cancelling detaches this
+  // input via render(), and browsers fire a blur event on an element removed
+  // from the document, which would otherwise re-trigger the blur handler below.
+  let settled = false;
+
+  function commit() {
+    if (settled) return;
+    settled = true;
+    try {
+      state.roster = renamePerson(state.roster, person.id, input.value);
+      editingId = null;
+      persist();
+      render();
+    } catch (err) {
+      // Leave the editor open with the typed text so the host can fix it.
+      settled = false;
+      showError(err.message);
+    }
+  }
+
+  function cancel() {
+    if (settled) return;
+    settled = true;
+    editingId = null;
+    render();
+  }
+
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commit();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      cancel();
+    }
+  });
+  input.addEventListener('blur', commit);
+
+  return input;
+}
+
 function rosterRow(person) {
   const li = document.createElement('li');
 
@@ -40,36 +103,20 @@ function rosterRow(person) {
   box.checked = state.present.includes(person.id);
   box.addEventListener('change', () => togglePresent(person.id, box.checked));
 
-  const name = document.createElement('span');
-  name.className = 'name';
-  name.textContent = person.name;
-
-  const rename = document.createElement('button');
-  rename.type = 'button';
-  rename.textContent = 'rename';
-  rename.addEventListener('click', () => {
-    const next = window.prompt('New name', person.name);
-    if (next === null) return;
-    try {
-      state.roster = renamePerson(state.roster, person.id, next);
-      persist();
-      render();
-    } catch (err) {
-      showError(err.message);
-    }
-  });
+  const name = editingId === person.id ? nameEditor(person) : nameButton(person);
 
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.textContent = 'remove';
   remove.addEventListener('click', () => {
+    if (editingId === person.id) editingId = null;
     state.roster = removePerson(state.roster, person.id);
     state.present = prunePresent(state.roster, state.present);
     persist();
     render();
   });
 
-  li.append(box, name, rename, remove);
+  li.append(box, name, remove);
   return li;
 }
 
@@ -84,6 +131,13 @@ function renderRoster() {
     return;
   }
   list.append(...state.roster.map(rosterRow));
+  if (editingId) {
+    const input = list.querySelector('.name-edit');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
 }
 
 function renderSetup() {

@@ -37,6 +37,27 @@ h2 { font-size: 22px; margin: 0 0 12px; }
 }
 .roster-list input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
 .roster-list .name { flex: 1; font-size: 20px; }
+.roster-list .name-btn {
+  font: inherit;
+  font-size: 20px;
+  font-weight: 400;
+  background: none;
+  border: none;
+  color: var(--text);
+  text-align: left;
+  cursor: text;
+  padding: 4px 0;
+}
+.roster-list .name-btn:hover,
+.roster-list .name-btn:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.roster-list .name-edit {
+  flex: 1;
+  font-size: 20px;
+  padding: 4px 8px;
+}
 .roster-list button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; }
 .roster-list button:hover { color: var(--danger); }
 .empty { color: var(--muted); font-style: italic; }

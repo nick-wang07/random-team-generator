@@ -11,3 +11,17 @@
 - [x] Teams at 3 with two people checked disables them and reads
       "Need at least 3 people for 3 teams".
 - [x] Refreshing restores the roster, the check-offs, and the team count.
+
+## Inline rename
+
+- [x] No rename button appears on any row.
+- [x] Clicking a name turns it into a text input with the current name selected.
+- [x] Typing a new name and pressing Enter renames the person, and it survives a refresh.
+- [x] Escape leaves the original name untouched.
+- [x] Clicking away from an open editor commits the change.
+- [x] Renaming someone to their own name in different case (e.g. Nick -> NICK) is accepted.
+- [x] Renaming someone to a name another person already has shows "is already on the roster"
+      AND leaves the editor open with the typed text intact.
+- [x] Renaming to blank shows "Name cannot be empty" and leaves the editor open.
+- [x] Clicking the name does not toggle that row's checkbox.
+- [x] Tabbing to a name and pressing Enter opens the editor.
