@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Team Generator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <section id="setup-view" class="view">
+      <h1>Team Generator</h1>
+      <p id="storage-notice" class="notice" hidden>
+        Saving is turned off in this browser, so your roster will not survive a refresh.
+      </p>
+
+      <div class="roster-panel">
+        <h2>Who is in the call?</h2>
+        <ul id="roster-list" class="roster-list"></ul>
+        <form id="add-form" class="add-form">
+          <input id="name-input" type="text" placeholder="Add a name" autocomplete="off">
+          <button id="add-btn" type="submit">Add</button>
+        </form>
+      </div>
+
+      <div class="config-panel">
+        <label for="team-count">Teams</label>
+        <input id="team-count" type="number" min="2" max="8" value="2">
+        <p id="setup-error" class="error" hidden></p>
+        <div class="start-buttons">
+          <button id="start-wheel-btn" type="button">Spin the wheel</button>
+          <button id="start-draft-btn" type="button">Captain draft</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="run-view" class="view" hidden></section>
+    <section id="results-view" class="view" hidden></section>
+  </main>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
