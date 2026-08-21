@@ -1,0 +1,56 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createStorage, DEFAULT_STATE, STORAGE_KEY } from '../src/storage.js';
+
+function fakeBackend(initial = {}) {
+  const map = new Map(Object.entries(initial));
+  return {
+    getItem: (key) => (map.has(key) ? map.get(key) : null),
+    setItem: (key, value) => { map.set(key, value); },
+  };
+}
+
+test('load returns defaults when nothing is stored', () => {
+  const store = createStorage(fakeBackend());
+  assert.deepEqual(store.load(), DEFAULT_STATE);
+});
+
+test('save then load round-trips the state', () => {
+  const backend = fakeBackend();
+  const state = {
+    roster: [{ id: 'a', name: 'Nick' }],
+    present: ['a'],
+    config: { teamCount: 3, draftOrder: 'alternating' },
+  };
+  createStorage(backend).save(state);
+  assert.deepEqual(createStorage(backend).load(), state);
+});
+
+test('corrupt stored data falls back to defaults instead of throwing', () => {
+  const store = createStorage(fakeBackend({ [STORAGE_KEY]: 'not json{' }));
+  assert.deepEqual(store.load(), DEFAULT_STATE);
+});
+
+test('partial stored data is filled in with defaults', () => {
+  const store = createStorage(fakeBackend({ [STORAGE_KEY]: '{"roster":[{"id":"a","name":"Nick"}]}' }));
+  const loaded = store.load();
+  assert.deepEqual(loaded.present, []);
+  assert.deepEqual(loaded.config, { teamCount: 2, draftOrder: 'snake' });
+});
+
+test('a null backend reports unavailable but still works', () => {
+  const store = createStorage(null);
+  assert.equal(store.available, false);
+  assert.deepEqual(store.load(), DEFAULT_STATE);
+  assert.equal(store.save(DEFAULT_STATE), false);
+});
+
+test('a throwing backend does not crash load or save', () => {
+  const hostile = {
+    getItem() { throw new Error('blocked'); },
+    setItem() { throw new Error('blocked'); },
+  };
+  const store = createStorage(hostile);
+  assert.deepEqual(store.load(), DEFAULT_STATE);
+  assert.equal(store.save(DEFAULT_STATE), false);
+});
