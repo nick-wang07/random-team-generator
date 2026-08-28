@@ -494,8 +494,6 @@ function renderRun() {
     : `Spinning for ${teamName}`;
 
   wheel.setSlices(state.run.pool.map(nameOf));
-  wheel.resize();
-  wheel.draw();
 
   const controls = el('run-controls');
   controls.replaceChildren();
@@ -509,6 +507,12 @@ function renderRun() {
 
   const teams = el('run-teams');
   teams.replaceChildren(teamColumns(state.run.teams));
+
+  // Sized last, deliberately. The wheel takes whatever height the controls and
+  // team columns leave it, so measuring before those are in the DOM reads a
+  // taller box than the one the wheel ends up in.
+  wheel.resize();
+  wheel.draw();
 }
 
 function renderDraft() {
