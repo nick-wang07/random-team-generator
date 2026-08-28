@@ -92,11 +92,45 @@ export function createWheel(canvas) {
     drawPointer(cx, radius);
   }
 
+  const SPIN_MS = 4000;
+  let spinning = false;
+
+  // Cubic ease-out: fast off the line, creeping into the final degree.
+  function easeOut(t) {
+    return 1 - (1 - t) ** 3;
+  }
+
+  function spinTo(stopAngleDeg, durationMs = SPIN_MS) {
+    const from = rotation;
+    const distance = stopAngleDeg - from;
+    spinning = true;
+    return new Promise((resolve) => {
+      const started = performance.now();
+      function frame(now) {
+        const t = Math.min(1, (now - started) / durationMs);
+        rotation = from + distance * easeOut(t);
+        draw();
+        if (t < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          // Normalise so the next spin's 4-to-6 turns start from a small angle.
+          rotation = ((stopAngleDeg % 360) + 360) % 360;
+          draw();
+          spinning = false;
+          resolve();
+        }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
   return {
     setSlices(next) { labels = [...next]; },
     setRotation(deg) { rotation = deg; },
     getRotation() { return rotation; },
     resize,
     draw,
+    spinTo,
+    isSpinning: () => spinning,
   };
 }

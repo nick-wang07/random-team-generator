@@ -83,6 +83,10 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .notice { color: var(--muted); margin: 0 0 20px; }
 
 .turn-heading { font-size: 32px; margin: 0 0 8px; }
+.winner-banner {
+  text-align: center; font-size: 30px; font-weight: 700;
+  color: var(--accent); margin: 0 0 20px; min-height: 40px;
+}
 .wheel-wrap { display: flex; justify-content: center; margin: 12px 0 24px; }
 #wheel-canvas { width: min(600px, 80vw); height: auto; aspect-ratio: 1; }
 .team-columns { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 28px; }

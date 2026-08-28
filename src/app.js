@@ -1,7 +1,7 @@
 import { browserBackend, createStorage } from './storage.js';
 import { addPerson, removePerson, renamePerson, prunePresent, findPerson } from './roster.js';
 import { validateSetup, pickRotation, teamLabel } from './teams.js';
-import { randomIndex } from './rng.js';
+import { randomIndex, planSpin } from './rng.js';
 import { startRun, applyPick, currentTeamIndex, isComplete, picksRemaining } from './run.js';
 import { formatTeams } from './format.js';
 import { createWheel } from './wheel.js';
@@ -228,13 +228,39 @@ function startWheelRun() {
     teamCount: state.config.teamCount,
     order: pickRotation(present.length, state.config.teamCount),
   });
+  el('winner-banner').hidden = true;
   render();
 }
 
-function spinOnce() {
-  const winner = state.run.pool[randomIndex(state.run.pool)];
-  state.run = applyPick(state.run, winner);
+function setControlsEnabled(enabled) {
+  for (const button of el('run-controls').querySelectorAll('button')) {
+    button.disabled = !enabled;
+  }
+}
+
+function announce(message) {
+  const banner = el('winner-banner');
+  banner.textContent = message;
+  banner.hidden = false;
+}
+
+async function spinOnce() {
+  if (wheel.isSpinning()) return;
+
+  const winnerIndex = randomIndex(state.run.pool);
+  const winnerId = state.run.pool[winnerIndex];
+  const teamName = teamLabel(currentTeamIndex(state.run));
+  const plan = planSpin(state.run.pool.length, winnerIndex);
+
+  el('winner-banner').hidden = true;
+  setControlsEnabled(false);
+  await wheel.spinTo(plan.stopAngleDeg);
+
+  state.run = applyPick(state.run, winnerId);
   render();
+  // Announced after the re-render, or the fresh render would wipe the banner
+  // before anyone on the stream could read it.
+  announce(`${nameOf(winnerId)} joins ${teamName}`);
 }
 
 function teamColumns(teams) {
@@ -271,7 +297,7 @@ function renderRun() {
   controls.replaceChildren();
   const pick = document.createElement('button');
   pick.type = 'button';
-  pick.textContent = `Pick next (${picksRemaining(state.run)} left)`;
+  pick.textContent = `Spin (${picksRemaining(state.run)} left)`;
   pick.addEventListener('click', spinOnce);
   controls.append(pick);
 

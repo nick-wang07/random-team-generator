@@ -62,3 +62,19 @@ With six people checked and Teams at 2:
 - [x] Clicking "Pick next" removes that person's slice and the wheel redraws evenly.
 - [x] With twelve names the text still fits inside the slices.
 - [x] Resizing the window keeps the wheel crisp, not blurry or stretched.
+
+## Wheel spinning
+
+With six people checked and Teams at 2:
+
+- [x] Clicking Spin turns the wheel for about four seconds and decelerates smoothly.
+- [x] The pointer stops inside a slice, not on a divider line.
+- [x] The name under the pointer is exactly the name announced and the one added to
+      the team. Verified across two complete six-person runs (12 picks total) plus
+      individual spins watched mid-flight — every announced winner matched the
+      slice sitting under the pointer when the wheel stopped.
+- [x] Spinning is not clickable again while the wheel is turning (a rapid
+      triple-click on Spin advanced only one pick).
+- [x] Spinning for the same-sized pool twice stops at visibly different offsets.
+- [x] The heading names the correct team before each spin, alternating A, B, A, B.
+- [x] A full six-person run ends on the results view with 3 and 3.
