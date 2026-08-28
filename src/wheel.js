@@ -94,12 +94,6 @@ export function createWheel(canvas) {
 
   const SPIN_MS = 4000;
   let spinning = false;
-  // The in-flight animation frame and the resolver for the spin currently
-  // running, so a second spinTo() call (no caller today does this — app.js
-  // guards with isSpinning() first — but a future caller might not) can
-  // cancel the stale loop instead of letting two loops fight over `rotation`.
-  let activeFrame = null;
-  let resolveActive = null;
 
   // Cubic ease-out: fast off the line, creeping into the final degree.
   function easeOut(t) {
@@ -108,36 +102,35 @@ export function createWheel(canvas) {
 
   function spinTo(stopAngleDeg, durationMs = SPIN_MS) {
     if (spinning) {
-      // Supersede the stale spin: stop its loop from writing `rotation` out
-      // from under this one, and let its caller's await settle rather than
-      // hang forever.
-      cancelAnimationFrame(activeFrame);
-      resolveActive();
+      // Refuse rather than touch the in-flight spin: resolving or cancelling
+      // someone else's promise on their behalf is exactly how a second
+      // caller (e.g. a future captain-draft spin) could apply a pick whose
+      // animation never actually landed. app.js's spinOnce() already checks
+      // isSpinning() before calling, so this path is unreachable there — it
+      // exists so wheel.js defends its own invariant no matter who calls it.
+      return Promise.reject(new Error('spinTo called while already spinning'));
     }
 
     const from = rotation;
     const distance = stopAngleDeg - from;
     spinning = true;
     return new Promise((resolve) => {
-      resolveActive = resolve;
       const started = performance.now();
       function frame(now) {
         const t = Math.min(1, (now - started) / durationMs);
         rotation = from + distance * easeOut(t);
         draw();
         if (t < 1) {
-          activeFrame = requestAnimationFrame(frame);
+          requestAnimationFrame(frame);
         } else {
           // Normalise so the next spin's 4-to-6 turns start from a small angle.
           rotation = ((stopAngleDeg % 360) + 360) % 360;
           draw();
           spinning = false;
-          activeFrame = null;
-          resolveActive = null;
           resolve();
         }
       }
-      activeFrame = requestAnimationFrame(frame);
+      requestAnimationFrame(frame);
     });
   }
 
