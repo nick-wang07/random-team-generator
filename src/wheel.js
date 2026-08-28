@@ -54,6 +54,14 @@ export function createWheel(canvas) {
     }
 
     const sliceAngle = 360 / labels.length;
+    // Cap and per-label budget both scale down with the wheel's actual
+    // radius, not just the label count — at the reference 600px canvas
+    // (radius 270) this reproduces the original max(14, min(28, 520/n))
+    // exactly; on the narrower canvases the responsive CSS width allows
+    // (down to ~320px, radius ~130) it shrinks further so long names stop
+    // overrunning the hub.
+    const radiusScale = radius / 270;
+    const fontSize = Math.max(14, Math.min(28 * radiusScale, (520 * radiusScale) / labels.length));
 
     labels.forEach((label, i) => {
       const start = toRad(rotation + i * sliceAngle - 90);
@@ -69,15 +77,26 @@ export function createWheel(canvas) {
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Text runs along the middle of the slice, reading outward.
+      // Text runs along the middle of the slice, reading outward. This does
+      // not change slice geometry at all — `start`/`end` above are untouched
+      // — it only changes which way the label text is drawn. A slice whose
+      // midpoint falls on the wheel's left half would otherwise render its
+      // label upside down (screen-shared, half the names would read
+      // backwards), so those get an extra 180° rotation, with the anchor and
+      // alignment mirrored to match, keeping every label reading
+      // left-to-right all the way around.
+      const midAngleDeg = rotation + (i + 0.5) * sliceAngle - 90;
+      const normalizedMid = ((midAngleDeg % 360) + 360) % 360;
+      const flipped = normalizedMid > 90 && normalizedMid < 270;
+
       ctx.save();
       ctx.translate(cx, cy);
-      ctx.rotate(toRad(rotation + (i + 0.5) * sliceAngle - 90));
-      ctx.textAlign = 'right';
+      ctx.rotate(toRad(flipped ? midAngleDeg + 180 : midAngleDeg));
+      ctx.textAlign = flipped ? 'left' : 'right';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#0f1116';
-      ctx.font = `600 ${Math.max(14, Math.min(28, 520 / labels.length))}px system-ui, sans-serif`;
-      ctx.fillText(label, radius - 16, 0);
+      ctx.font = `600 ${fontSize}px system-ui, sans-serif`;
+      ctx.fillText(label, flipped ? -(radius - 16) : radius - 16, 0);
       ctx.restore();
     });
 

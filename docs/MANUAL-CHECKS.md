@@ -150,3 +150,65 @@ With "Spin for captains" (six people, Teams at 2) — this is the check Task
       the app's real, running `render()` and the real `applyPick` from
       `src/run.js` — the exact functions `spinOnce()` calls — so the
       routing logic under test ran unmodified in the live page.)
+
+## Undo, keyboard, and the final pass
+
+- [x] Undo during a wheel run puts the person back on the wheel in their old
+      slice position. Spun an 8-person, 3-team wheel run; the winner's slice
+      (colour, name, and angular position) reappeared exactly where it had
+      been before the spin, and the team's member count dropped back by one.
+- [x] Undo is disabled before the first pick of a run. Confirmed for a fresh
+      wheel run and for a fresh captain draft (captains are seeded directly,
+      not via a pick, so `history` starts empty and "Undo last pick" renders
+      disabled in both).
+- [x] Undo from the results view reopens the run with the last pick
+      reversed. On a completed 8-person, 3-team wheel run, clicking undo
+      from the results view dropped straight back into the run view with
+      the last winner back on the wheel and that team's count reduced by
+      one — `isComplete` turning false again is what routes `render()` back
+      out of the results view.
+- [x] Space bar spins the wheel, and typing a name into the roster input
+      never triggers a spin. Verified space spins when focus is on a
+      non-input, non-button element (e.g. the heading) and when focus is on
+      the Spin button itself (native button activation), in both cases
+      advancing by exactly one pick, never two. The roster input can only be
+      focused during setup, where `state.run` is null and the handler no-ops
+      before it ever checks the key.
+- [x] Space bar does nothing on the draft board. Pressed space with the
+      draft board showing; no pick was made, no error.
+- [x] "Back to setup" mid-run returns to the roster with check-offs intact.
+      Verified for the wheel view — all 8 checked people and the team count
+      were still set after returning.
+- [x] A full 8-person, 3-team wheel run and a full 8-person, 3-team snake
+      draft both complete correctly. Wheel: Team A (Eve, Grace, Carol),
+      Team B (Heidi, Alice, Frank), Team C (Dave, Bob) — 3/3/2, all eight
+      placed once each. Snake draft (captains Alice/Bob/Carol): Team A
+      (Alice, Dave), Team B (Bob, Eve, Heidi), Team C (Carol, Frank, Grace)
+      — pick order followed A, B, C, C, B, A as expected.
+
+### Deferred fixes (also verified)
+
+- [x] **Wheel labels flip on the left half.** Across many spins at
+      different rotations (8-, 5-, 3-, 2-slice wheels), every name read
+      left-to-right and upright regardless of which side of the wheel its
+      slice landed on — nothing appeared mirrored or upside down.
+- [x] **Wheel font size responds to canvas radius, not just label count.**
+      At a canvas resized to 320px wide (radius ~130px), realistic long
+      names ("Christopher", "Alexander", "Elizabeth", "Nathaniel") rendered
+      fully inside their slices without touching the hub. Measured via
+      `canvas.measureText`: at the narrow width the font floors at 14px and
+      the radial budget before the hub is ~86px; those names measure
+      57–74px wide, comfortably inside. Two deliberately extreme synthetic
+      names (14 and 16 characters, "Christopherson" and
+      "Alexanderopoulos") still slightly overrun the hub even at the 14px
+      floor (97px and 115px against the same ~86px budget) — the fix is a
+      global font-size formula, not per-label text measurement, so a
+      readability floor and a genuinely very long single word can still
+      exceed the available radial space. This is a large improvement over
+      the pre-fix behavior (which held the font at a fixed 28px regardless
+      of canvas size) but not a hard guarantee for arbitrary name length.
+- [x] **Clipboard copy failure is handled.** Patched
+      `navigator.clipboard.writeText` to reject and clicked "Copy for
+      Discord": the button showed "Copy failed" instead of throwing an
+      unhandled rejection, then reverted to its normal label after the
+      timeout, same as the success path.

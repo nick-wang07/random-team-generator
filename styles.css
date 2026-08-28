@@ -113,3 +113,9 @@ button.secondary { background: var(--line); color: var(--text); }
   border: 1px solid var(--line); font-size: 24px; padding: 14px 22px;
 }
 .draft-pool button:hover { border-color: var(--accent); color: var(--accent); }
+
+@media (min-width: 900px) {
+  h1 { font-size: 48px; }
+  .turn-heading { font-size: 40px; }
+  .team-column li { font-size: 28px; }
+}

@@ -2,7 +2,7 @@ import { browserBackend, createStorage } from './storage.js';
 import { addPerson, removePerson, renamePerson, prunePresent, findPerson } from './roster.js';
 import { validateSetup, pickRotation, teamLabel } from './teams.js';
 import { randomIndex, planSpin } from './rng.js';
-import { startRun, applyPick, currentTeamIndex, isComplete, picksRemaining } from './run.js';
+import { startRun, applyPick, undoPick, currentTeamIndex, isComplete, picksRemaining } from './run.js';
 import { formatTeams } from './format.js';
 import { createWheel } from './wheel.js';
 import { draftSequence } from './draft.js';
@@ -356,6 +356,36 @@ async function spinOnce() {
   announce(`${nameOf(winnerId)} joins ${teamName}`);
 }
 
+function undoLast() {
+  if (wheel.isSpinning()) return;
+  if (!state.run || state.run.history.length === 0) return;
+  state.run = undoPick(state.run);
+  render();
+}
+
+function addUndoButton(container) {
+  const undo = document.createElement('button');
+  undo.type = 'button';
+  undo.className = 'secondary';
+  undo.textContent = 'Undo last pick';
+  undo.disabled = state.run.history.length === 0;
+  undo.addEventListener('click', undoLast);
+  container.append(undo);
+}
+
+function addAbandonButton(container) {
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'secondary';
+  back.textContent = 'Back to setup';
+  back.addEventListener('click', () => {
+    if (wheel.isSpinning()) return;
+    state.run = null;
+    render();
+  });
+  container.append(back);
+}
+
 function teamColumns(teams) {
   const wrap = document.createElement('div');
   wrap.className = 'team-columns';
@@ -396,6 +426,8 @@ function renderRun() {
   pick.textContent = `Spin (${picksRemaining(state.run)} left)`;
   pick.addEventListener('click', spinOnce);
   controls.append(pick);
+  addUndoButton(controls);
+  addAbandonButton(controls);
 
   const teams = el('run-teams');
   teams.replaceChildren(teamColumns(state.run.teams));
@@ -422,7 +454,10 @@ function renderDraft() {
   }
 
   el('draft-teams').replaceChildren(teamColumns(state.run.teams));
-  el('draft-controls').replaceChildren();
+  const draftControls = el('draft-controls');
+  draftControls.replaceChildren();
+  addUndoButton(draftControls);
+  addAbandonButton(draftControls);
 }
 
 function renderResults() {
@@ -436,8 +471,12 @@ function renderResults() {
   copy.type = 'button';
   copy.textContent = 'Copy for Discord';
   copy.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(formatTeams(state.run.teams, state.roster));
-    copy.textContent = 'Copied';
+    try {
+      await navigator.clipboard.writeText(formatTeams(state.run.teams, state.roster));
+      copy.textContent = 'Copied';
+    } catch {
+      copy.textContent = 'Copy failed';
+    }
     setTimeout(() => { copy.textContent = 'Copy for Discord'; }, 1500);
   });
 
@@ -449,7 +488,9 @@ function renderResults() {
 
   const actions = document.createElement('div');
   actions.className = 'start-buttons';
-  actions.append(copy, again);
+  actions.append(copy);
+  addUndoButton(actions);
+  actions.append(again);
 
   view.append(heading, teamColumns(state.run.teams), actions);
 }
@@ -523,5 +564,13 @@ for (const radio of document.querySelectorAll('input[name="captain-mode"]')) {
 
 el('start-wheel-btn').addEventListener('click', startWheelRun);
 el('start-draft-btn').addEventListener('click', startDraft);
+
+document.addEventListener('keydown', (event) => {
+  if (event.code !== 'Space') return;
+  if (event.target.matches('input, textarea, button')) return;
+  if (!state.run || state.run.mode === 'draft' || isComplete(state.run)) return;
+  event.preventDefault();
+  spinOnce();
+});
 
 render();
