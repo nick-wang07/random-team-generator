@@ -356,7 +356,7 @@ function announce(message) {
   banner.classList.add('visible');
 }
 
-const REVEAL_MS = 3500;
+const REVEAL_MS = 2500;
 // Set while the reveal card is up, so the spacebar closes the card instead of
 // falling through and starting the next spin on the same keypress.
 let closeReveal = null;
