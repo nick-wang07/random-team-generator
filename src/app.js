@@ -360,6 +360,7 @@ function undoLast() {
   if (wheel.isSpinning()) return;
   if (!state.run || state.run.history.length === 0) return;
   state.run = undoPick(state.run);
+  el('winner-banner').hidden = true;
   render();
 }
 
