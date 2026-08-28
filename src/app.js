@@ -505,12 +505,12 @@ function renderRun() {
   addUndoButton(controls);
   addAbandonButton(controls);
 
-  const teams = el('run-teams');
-  teams.replaceChildren(teamColumns(state.run.teams));
+  // Teams flank the wheel: the first half of them down the left, the rest
+  // down the right. With the usual two teams that is simply A and B.
+  const split = Math.ceil(state.run.teams.length / 2);
+  el('run-teams-left').replaceChildren(teamColumns(state.run.teams.slice(0, split)));
+  el('run-teams-right').replaceChildren(teamColumns(state.run.teams.slice(split)));
 
-  // Sized last, deliberately. The wheel takes whatever height the controls and
-  // team columns leave it, so measuring before those are in the DOM reads a
-  // taller box than the one the wheel ends up in.
   wheel.resize();
   wheel.draw();
 }

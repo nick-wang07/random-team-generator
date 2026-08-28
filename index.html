@@ -47,12 +47,15 @@
 
     <section id="run-view" class="view" hidden>
       <h2 id="turn-heading" class="turn-heading"></h2>
-      <div class="wheel-wrap">
-        <canvas id="wheel-canvas" width="600" height="600"></canvas>
+      <div class="run-stage">
+        <div id="run-teams-left" class="team-side"></div>
+        <div class="wheel-wrap">
+          <canvas id="wheel-canvas" width="600" height="600"></canvas>
+        </div>
+        <div id="run-teams-right" class="team-side"></div>
       </div>
       <p id="winner-banner" class="winner-banner"></p>
       <div id="run-controls" class="start-buttons"></div>
-      <div id="run-teams"></div>
     </section>
 
     <!-- Lives outside every view section on purpose: the last captain spin
