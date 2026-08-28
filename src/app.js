@@ -408,12 +408,16 @@ async function spinOnce() {
   const winnerIndex = randomIndex(state.run.pool);
   const winnerId = state.run.pool[winnerIndex];
   const teamName = teamLabel(currentTeamIndex(state.run));
-  const plan = planSpin(state.run.pool.length, winnerIndex);
+  // A one-slice wheel is the whole disc: there is no suspense left to build
+  // and spinning it just costs everyone four seconds. Straight to the card.
+  const lastOne = state.run.pool.length === 1;
 
   hideBanner();
   setControlsEnabled(false);
   try {
-    await wheel.spinTo(plan.stopAngleDeg);
+    if (!lastOne) {
+      await wheel.spinTo(planSpin(state.run.pool.length, winnerIndex).stopAngleDeg);
+    }
     // Held open before the pick is applied: render() redraws the wheel without
     // the winner, so applying first would erase the slice everyone is looking
     // at. The wheel stays stopped on them for as long as the card is up.
@@ -499,7 +503,9 @@ function renderRun() {
   controls.replaceChildren();
   const pick = document.createElement('button');
   pick.type = 'button';
-  pick.textContent = `Spin (${picksRemaining(state.run)} left)`;
+  pick.textContent = state.run.pool.length === 1
+    ? 'Reveal the last one'
+    : `Spin (${picksRemaining(state.run)} left)`;
   pick.addEventListener('click', spinOnce);
   controls.append(pick);
   addUndoButton(controls);
