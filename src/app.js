@@ -3,7 +3,7 @@ import { addPerson, removePerson, renamePerson, prunePresent, findPerson } from 
 import { validateSetup, pickRotation, teamLabel } from './teams.js';
 import { randomIndex, planSpin } from './rng.js';
 import { startRun, applyPick, undoPick, currentTeamIndex, isComplete, picksRemaining } from './run.js';
-import { formatTeams } from './format.js';
+import { formatTeams, teamHasWalt, commiserate } from './format.js';
 import { createWheel } from './wheel.js';
 import { draftSequence } from './draft.js';
 
@@ -473,10 +473,11 @@ function teamColumns(teams) {
     const heading = document.createElement('h3');
     heading.textContent = `${team.name} (${team.members.length})`;
 
+    const hasWalt = teamHasWalt(team.members, state.roster);
     const list = document.createElement('ul');
     list.append(...team.members.map((id) => {
       const li = document.createElement('li');
-      li.textContent = nameOf(id);
+      li.textContent = commiserate(nameOf(id), hasWalt);
       return li;
     }));
 
