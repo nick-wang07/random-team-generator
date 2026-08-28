@@ -53,3 +53,12 @@ With six people checked and Teams at 2:
       person.
 - [x] "Copy for Discord" puts readable text on the clipboard.
 - [x] "Back to setup" returns to the roster with the check-offs intact.
+
+## Wheel drawing
+
+- [x] Starting a run shows a full wheel with one slice per person in the pool.
+- [x] Every name is readable and no two neighbouring slices share a colour.
+- [x] The pointer is clearly at the top.
+- [x] Clicking "Pick next" removes that person's slice and the wheel redraws evenly.
+- [x] With twelve names the text still fits inside the slices.
+- [x] Resizing the window keeps the wheel crisp, not blurry or stretched.

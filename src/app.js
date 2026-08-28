@@ -4,6 +4,7 @@ import { validateSetup, pickRotation, teamLabel } from './teams.js';
 import { randomIndex } from './rng.js';
 import { startRun, applyPick, currentTeamIndex, isComplete, picksRemaining } from './run.js';
 import { formatTeams } from './format.js';
+import { createWheel } from './wheel.js';
 
 const store = createStorage(browserBackend());
 const loaded = store.load();
@@ -16,6 +17,9 @@ export const state = {
 };
 
 const el = (id) => document.getElementById(id);
+
+const wheel = createWheel(el('wheel-canvas'));
+window.addEventListener('resize', () => { wheel.resize(); wheel.draw(); });
 
 function persist() {
   store.save({ roster: state.roster, present: state.present, config: state.config });
@@ -257,23 +261,22 @@ function teamColumns(teams) {
 }
 
 function renderRun() {
-  const view = el('run-view');
-  view.replaceChildren();
+  el('turn-heading').textContent = `Spinning for ${teamLabel(currentTeamIndex(state.run))}`;
 
-  const heading = document.createElement('h2');
-  heading.className = 'turn-heading';
-  heading.textContent = `Spinning for ${teamLabel(currentTeamIndex(state.run))}`;
+  wheel.setSlices(state.run.pool.map(nameOf));
+  wheel.resize();
+  wheel.draw();
 
-  const pool = document.createElement('p');
-  pool.className = 'pool-line';
-  pool.textContent = state.run.pool.map(nameOf).join(' · ');
-
+  const controls = el('run-controls');
+  controls.replaceChildren();
   const pick = document.createElement('button');
   pick.type = 'button';
   pick.textContent = `Pick next (${picksRemaining(state.run)} left)`;
   pick.addEventListener('click', spinOnce);
+  controls.append(pick);
 
-  view.append(heading, pool, pick, teamColumns(state.run.teams));
+  const teams = el('run-teams');
+  teams.replaceChildren(teamColumns(state.run.teams));
 }
 
 function renderResults() {
