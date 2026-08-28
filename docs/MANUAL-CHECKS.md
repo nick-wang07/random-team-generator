@@ -78,3 +78,40 @@ With six people checked and Teams at 2:
 - [x] Spinning for the same-sized pool twice stops at visibly different offsets.
 - [x] The heading names the correct team before each spin, alternating A, B, A, B.
 - [x] A full six-person run ends on the results view with 3 and 3.
+
+## Draft setup
+
+With six people (Alice, Bob, Carol, Dave, Eve, Frank) checked and Teams at 2:
+
+- [x] Choosing "Choose captains" reveals a checkbox list of the present
+      people only.
+- [x] With 2 teams, selecting 1 captain disables the draft button and says
+      "Pick exactly 2 captains (1 selected)".
+- [x] Selecting 2 captains enables it and starts the draft with each captain
+      already on a team (Bob seeded on Team A, Alice on Team B; the wheel
+      showed only the remaining four names, with "Spin (4 left)").
+- [x] With "Spin for captains", the wheel spins twice, headings read
+      "Spinning for Team A's captain" then "Spinning for Team B's captain".
+- [ ] **Unverifiable as specified — see note below.** After the second
+      captain spin, the draft board appears with both captains seeded and
+      neither still in the pool.
+- [x] Unchecking a present person also drops them as a captain (unchecking
+      Alice while she was a selected captain removed her from the captain
+      list entirely and dropped the selected count back to 1).
+- [x] The snake and alternating choice survives a refresh (set to
+      "Alternating", refreshed, still "Alternating"); the captain mode
+      resets to "Spin for captains" even though "Choose captains" was
+      selected before the refresh.
+
+**Note on the unverifiable check:** Per the task-11 pre-flight ruling, this
+task deliberately does not insert the `render()` block that routes a
+finished `mode: 'captains'` run into `beginDraftFromCaptains` — Task 12
+restates the entire `render()` function including that routing, and adding
+it here would cause a double-insertion. Without that routing, a completed
+captain-spin run currently falls through to the ordinary "finished run"
+branch and renders the results view (a "Teams" heading with a one-person
+Team A/Team B and a Discord-copy button) instead of the draft board. What
+*is* verified: the underlying run mechanics are correct — the second spin's
+winner is a different person than the first, both are removed from the
+pool immediately after their spin, and each is seeded onto the correct
+team. The board itself is Task 12's deliverable.

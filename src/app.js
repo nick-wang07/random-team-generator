@@ -5,6 +5,7 @@ import { randomIndex, planSpin } from './rng.js';
 import { startRun, applyPick, currentTeamIndex, isComplete, picksRemaining } from './run.js';
 import { formatTeams } from './format.js';
 import { createWheel } from './wheel.js';
+import { draftSequence } from './draft.js';
 
 const store = createStorage(browserBackend());
 const loaded = store.load();
@@ -15,6 +16,11 @@ export const state = {
   config: loaded.config,
   run: null,
 };
+// `captainMode` is a per-session choice, not part of the persisted storage
+// schema (storage.js only knows about `draftOrder`), so it's seeded here
+// rather than in storage.js's defaults.
+state.config.captainMode = state.config.captainMode ?? 'spin';
+state.captains = [];
 
 const el = (id) => document.getElementById(id);
 
@@ -202,8 +208,53 @@ function renderRoster() {
   editingJustOpened = false;
 }
 
+function validateDraftSetup() {
+  const base = validateSetup({
+    presentCount: state.present.length,
+    teamCount: state.config.teamCount,
+  });
+  if (!base.ok) return base;
+  if (state.config.captainMode === 'choose' && state.captains.length !== state.config.teamCount) {
+    return {
+      ok: false,
+      reason: `Pick exactly ${state.config.teamCount} captains (${state.captains.length} selected)`,
+    };
+  }
+  return { ok: true };
+}
+
+function renderCaptainList() {
+  const list = el('captain-list');
+  const choosing = state.config.captainMode === 'choose';
+  list.hidden = !choosing;
+  list.replaceChildren();
+  if (!choosing) return;
+
+  for (const id of state.present) {
+    const li = document.createElement('li');
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = state.captains.includes(id);
+    box.addEventListener('change', () => {
+      state.captains = box.checked
+        ? [...state.captains, id]
+        : state.captains.filter((x) => x !== id);
+      render();
+    });
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = nameOf(id);
+    li.append(box, name);
+    list.append(li);
+  }
+}
+
 function renderSetup() {
+  // Drop any captain who is no longer present (unchecked from the roster).
+  state.captains = state.captains.filter((id) => state.present.includes(id));
+
   renderRoster();
+  renderCaptainList();
   el('team-count').value = String(state.config.teamCount);
   const check = validateSetup({
     presentCount: state.present.length,
@@ -213,7 +264,10 @@ function renderSetup() {
   // an incidental re-render (checkbox, add, team count) doesn't erase it.
   showError(editingId && editingError ? editingError : check.ok ? '' : check.reason);
   el('start-wheel-btn').disabled = !check.ok;
-  el('start-draft-btn').disabled = !check.ok;
+
+  const draftCheck = validateDraftSetup();
+  el('start-draft-btn').disabled = !draftCheck.ok;
+  if (check.ok && !draftCheck.ok) showError(draftCheck.reason);
 }
 
 function nameOf(id) {
@@ -229,6 +283,35 @@ function startWheelRun() {
     order: pickRotation(present.length, state.config.teamCount),
   });
   el('winner-banner').hidden = true;
+  render();
+}
+
+function beginDraftFromCaptains(captainIds) {
+  const teamCount = state.config.teamCount;
+  const present = [...state.present];
+  state.run = startRun({
+    mode: 'draft',
+    present,
+    teamCount,
+    order: draftSequence(teamCount, present.length - teamCount, state.config.draftOrder),
+    seeded: captainIds.map((id) => [id]),
+  });
+  render();
+}
+
+function startDraft() {
+  if (state.config.captainMode === 'choose') {
+    beginDraftFromCaptains(state.captains);
+    return;
+  }
+  // Spin once per team; each winner becomes that team's captain.
+  const present = [...state.present];
+  state.run = startRun({
+    mode: 'captains',
+    present,
+    teamCount: state.config.teamCount,
+    order: Array.from({ length: state.config.teamCount }, (_, i) => i),
+  });
   render();
 }
 
@@ -294,7 +377,10 @@ function teamColumns(teams) {
 }
 
 function renderRun() {
-  el('turn-heading').textContent = `Spinning for ${teamLabel(currentTeamIndex(state.run))}`;
+  const teamName = teamLabel(currentTeamIndex(state.run));
+  el('turn-heading').textContent = state.run.mode === 'captains'
+    ? `Spinning for ${teamName}'s captain`
+    : `Spinning for ${teamName}`;
 
   wheel.setSlices(state.run.pool.map(nameOf));
   wheel.resize();
@@ -379,6 +465,25 @@ el('team-count').addEventListener('input', () => {
   render();
 });
 
+for (const radio of document.querySelectorAll('input[name="draft-order"]')) {
+  radio.checked = radio.value === state.config.draftOrder;
+  radio.addEventListener('change', () => {
+    state.config.draftOrder = radio.value;
+    persist();
+    render();
+  });
+}
+
+for (const radio of document.querySelectorAll('input[name="captain-mode"]')) {
+  radio.checked = radio.value === state.config.captainMode;
+  radio.addEventListener('change', () => {
+    state.config.captainMode = radio.value;
+    state.captains = [];
+    render();
+  });
+}
+
 el('start-wheel-btn').addEventListener('click', startWheelRun);
+el('start-draft-btn').addEventListener('click', startDraft);
 
 render();

@@ -26,6 +26,17 @@
       <div class="config-panel">
         <label for="team-count">Teams</label>
         <input id="team-count" type="number" min="2" max="8" value="2">
+
+        <fieldset class="draft-options">
+          <legend>Captain draft</legend>
+          <label><input type="radio" name="draft-order" value="snake" checked> Snake (A B B A)</label>
+          <label><input type="radio" name="draft-order" value="alternating"> Alternating (A B A B)</label>
+          <hr>
+          <label><input type="radio" name="captain-mode" value="spin" checked> Spin for captains</label>
+          <label><input type="radio" name="captain-mode" value="choose"> Choose captains</label>
+          <ul id="captain-list" class="roster-list" hidden></ul>
+        </fieldset>
+
         <p id="setup-error" class="error" hidden></p>
         <div class="start-buttons">
           <button id="start-wheel-btn" type="button">Spin the wheel</button>
