@@ -1,6 +1,9 @@
 import { browserBackend, createStorage } from './storage.js';
-import { addPerson, removePerson, renamePerson, prunePresent } from './roster.js';
-import { validateSetup } from './teams.js';
+import { addPerson, removePerson, renamePerson, prunePresent, findPerson } from './roster.js';
+import { validateSetup, pickRotation, teamLabel } from './teams.js';
+import { randomIndex } from './rng.js';
+import { startRun, applyPick, currentTeamIndex, isComplete, picksRemaining } from './run.js';
+import { formatTeams } from './format.js';
 
 const store = createStorage(browserBackend());
 const loaded = store.load();
@@ -209,13 +212,109 @@ function renderSetup() {
   el('start-draft-btn').disabled = !check.ok;
 }
 
-export function render() {
-  if (!state.run) {
-    el('setup-view').hidden = false;
-    el('run-view').hidden = true;
-    el('results-view').hidden = true;
-    renderSetup();
+function nameOf(id) {
+  return findPerson(state.roster, id)?.name ?? '(unknown)';
+}
+
+function startWheelRun() {
+  const present = [...state.present];
+  state.run = startRun({
+    mode: 'wheel',
+    present,
+    teamCount: state.config.teamCount,
+    order: pickRotation(present.length, state.config.teamCount),
+  });
+  render();
+}
+
+function spinOnce() {
+  const winner = state.run.pool[randomIndex(state.run.pool)];
+  state.run = applyPick(state.run, winner);
+  render();
+}
+
+function teamColumns(teams) {
+  const wrap = document.createElement('div');
+  wrap.className = 'team-columns';
+  for (const team of teams) {
+    const col = document.createElement('div');
+    col.className = 'team-column';
+
+    const heading = document.createElement('h3');
+    heading.textContent = `${team.name} (${team.members.length})`;
+
+    const list = document.createElement('ul');
+    list.append(...team.members.map((id) => {
+      const li = document.createElement('li');
+      li.textContent = nameOf(id);
+      return li;
+    }));
+
+    col.append(heading, list);
+    wrap.append(col);
   }
+  return wrap;
+}
+
+function renderRun() {
+  const view = el('run-view');
+  view.replaceChildren();
+
+  const heading = document.createElement('h2');
+  heading.className = 'turn-heading';
+  heading.textContent = `Spinning for ${teamLabel(currentTeamIndex(state.run))}`;
+
+  const pool = document.createElement('p');
+  pool.className = 'pool-line';
+  pool.textContent = state.run.pool.map(nameOf).join(' · ');
+
+  const pick = document.createElement('button');
+  pick.type = 'button';
+  pick.textContent = `Pick next (${picksRemaining(state.run)} left)`;
+  pick.addEventListener('click', spinOnce);
+
+  view.append(heading, pool, pick, teamColumns(state.run.teams));
+}
+
+function renderResults() {
+  const view = el('results-view');
+  view.replaceChildren();
+
+  const heading = document.createElement('h2');
+  heading.textContent = 'Teams';
+
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.textContent = 'Copy for Discord';
+  copy.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(formatTeams(state.run.teams, state.roster));
+    copy.textContent = 'Copied';
+    setTimeout(() => { copy.textContent = 'Copy for Discord'; }, 1500);
+  });
+
+  const again = document.createElement('button');
+  again.type = 'button';
+  again.className = 'secondary';
+  again.textContent = 'Back to setup';
+  again.addEventListener('click', () => { state.run = null; render(); });
+
+  const actions = document.createElement('div');
+  actions.className = 'start-buttons';
+  actions.append(copy, again);
+
+  view.append(heading, teamColumns(state.run.teams), actions);
+}
+
+export function render() {
+  const running = Boolean(state.run);
+  const finished = running && isComplete(state.run);
+  el('setup-view').hidden = running;
+  el('run-view').hidden = !running || finished;
+  el('results-view').hidden = !finished;
+
+  if (!running) renderSetup();
+  else if (finished) renderResults();
+  else renderRun();
 }
 
 el('storage-notice').hidden = store.available;
@@ -243,5 +342,7 @@ el('team-count').addEventListener('input', () => {
   persist();
   render();
 });
+
+el('start-wheel-btn').addEventListener('click', startWheelRun);
 
 render();

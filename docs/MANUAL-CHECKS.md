@@ -37,3 +37,19 @@
 - [x] A failed "add a name" submission while a row's editor is showing a
       rejected-name error displays the add error, not the stale editor error,
       and that stale error does not resurface on the next unrelated render.
+
+## Wheel run and results
+
+With six people checked and Teams at 2:
+
+- [x] "Spin the wheel" hides setup and shows the run view.
+- [x] The heading reads "Spinning for Team A" before the first pick.
+- [x] Each "Pick next" click moves one name into a team and flips the heading
+      to the other team.
+- [x] The count in the button ticks down to zero.
+- [x] Nobody is assigned twice and nobody is left out.
+- [x] The results view appears after the last pick, with teams of 3 and 3.
+- [x] With five people the split is 3 and 2, and Team A gets the extra
+      person.
+- [x] "Copy for Discord" puts readable text on the clipboard.
+- [x] "Back to setup" returns to the roster with the check-offs intact.

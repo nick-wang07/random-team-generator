@@ -81,3 +81,15 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .start-buttons { display: flex; gap: 12px; margin-top: 16px; }
 .error { color: var(--danger); margin: 12px 0 0; }
 .notice { color: var(--muted); margin: 0 0 20px; }
+
+.turn-heading { font-size: 32px; margin: 0 0 8px; }
+.pool-line { color: var(--muted); margin: 0 0 20px; }
+.team-columns { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 28px; }
+.team-column {
+  flex: 1 1 220px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+}
+.team-column h3 { margin: 0 0 12px; font-size: 22px; color: var(--accent); }
+.team-column ul { list-style: none; margin: 0; padding: 0; }
+.team-column li { font-size: 24px; padding: 6px 0; }
+button.secondary { background: var(--line); color: var(--text); }
