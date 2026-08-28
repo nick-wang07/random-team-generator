@@ -356,8 +356,54 @@ function announce(message) {
   banner.classList.add('visible');
 }
 
+const REVEAL_MS = 3500;
+// Set while the reveal card is up, so the spacebar closes the card instead of
+// falling through and starting the next spin on the same keypress.
+let closeReveal = null;
+
+export function isRevealing() {
+  return closeReveal !== null;
+}
+
+// Shows the card and resolves once it is dismissed — by the timer, the X, a
+// click on the backdrop, or Escape/Space. Always resolves, never rejects, so
+// callers can await it without a pick going missing.
+function showReveal(name, teamName) {
+  const overlay = el('reveal-overlay');
+  el('reveal-name').textContent = name;
+  el('reveal-team').textContent = `joins ${teamName}`;
+  overlay.hidden = false;
+
+  return new Promise((resolve) => {
+    // Per-call, so idempotency never depends on the shared `closeReveal`
+    // still pointing at this particular dismiss.
+    let done = false;
+    const timer = setTimeout(dismiss, REVEAL_MS);
+
+    function dismiss() {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      closeReveal = null;
+      overlay.hidden = true;
+      overlay.removeEventListener('click', onBackdrop);
+      el('reveal-close').removeEventListener('click', dismiss);
+      resolve();
+    }
+
+    function onBackdrop(event) {
+      // Only the backdrop itself — a click inside the card must not close it.
+      if (event.target === overlay) dismiss();
+    }
+
+    closeReveal = dismiss;
+    overlay.addEventListener('click', onBackdrop);
+    el('reveal-close').addEventListener('click', dismiss);
+  });
+}
+
 async function spinOnce() {
-  if (wheel.isSpinning()) return;
+  if (wheel.isSpinning() || isRevealing()) return;
 
   const winnerIndex = randomIndex(state.run.pool);
   const winnerId = state.run.pool[winnerIndex];
@@ -368,6 +414,10 @@ async function spinOnce() {
   setControlsEnabled(false);
   try {
     await wheel.spinTo(plan.stopAngleDeg);
+    // Held open before the pick is applied: render() redraws the wheel without
+    // the winner, so applying first would erase the slice everyone is looking
+    // at. The wheel stays stopped on them for as long as the card is up.
+    await showReveal(nameOf(winnerId), teamName);
   } finally {
     // Restored on every path, including a rejected/aborted spin, so a
     // failure never leaves the controls stuck disabled with the winner
@@ -383,7 +433,7 @@ async function spinOnce() {
 }
 
 function undoLast() {
-  if (wheel.isSpinning()) return;
+  if (wheel.isSpinning() || isRevealing()) return;
   if (!state.run || state.run.history.length === 0) return;
   state.run = undoPick(state.run);
   hideBanner();
@@ -406,7 +456,7 @@ function addAbandonButton(container) {
   back.className = 'secondary';
   back.textContent = 'Back to setup';
   back.addEventListener('click', () => {
-    if (wheel.isSpinning()) return;
+    if (wheel.isSpinning() || isRevealing()) return;
     state.run = null;
     render();
   });
@@ -600,6 +650,15 @@ el('start-wheel-btn').addEventListener('click', startWheelRun);
 el('start-draft-btn').addEventListener('click', startDraft);
 
 document.addEventListener('keydown', (event) => {
+  // While the reveal card is up, Escape and Space close it rather than
+  // reaching the wheel — otherwise one keypress would dismiss the card and
+  // immediately start the next spin.
+  if (isRevealing()) {
+    if (event.code !== 'Space' && event.key !== 'Escape') return;
+    event.preventDefault();
+    closeReveal();
+    return;
+  }
   if (event.code !== 'Space') return;
   if (event.target.matches('input, textarea, button')) return;
   if (!state.run || state.run.mode === 'draft' || isComplete(state.run)) return;

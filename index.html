@@ -54,6 +54,17 @@
       <div id="run-controls" class="start-buttons"></div>
       <div id="run-teams"></div>
     </section>
+
+    <!-- Lives outside every view section on purpose: the last captain spin
+         hides #run-view as it routes to the draft board, and anything inside
+         it would be hidden along with it before it could be read. -->
+    <div id="reveal-overlay" class="reveal-overlay" hidden>
+      <div id="reveal-card" class="reveal-card" role="status" aria-live="polite">
+        <button type="button" id="reveal-close" class="reveal-close" aria-label="Close">&times;</button>
+        <p id="reveal-name" class="reveal-name"></p>
+        <p id="reveal-team" class="reveal-team"></p>
+      </div>
+    </div>
     <section id="draft-view" class="view" hidden>
       <h2 id="draft-heading" class="turn-heading"></h2>
       <div id="draft-pool" class="draft-pool"></div>
