@@ -16,9 +16,10 @@ export const state = {
   config: loaded.config,
   run: null,
 };
-// `captainMode` is a per-session choice, not part of the persisted storage
-// schema (storage.js only knows about `draftOrder`), so it's seeded here
-// rather than in storage.js's defaults.
+// `captainMode` is a per-session choice: persist()/save() writes it out as
+// part of state.config like everything else, but storage.js's load() only
+// reads back `teamCount` and `draftOrder` and drops the rest, so it resets
+// to the default every session rather than surviving a refresh.
 state.config.captainMode = state.config.captainMode ?? 'spin';
 state.captains = [];
 
@@ -267,7 +268,9 @@ function renderSetup() {
 
   const draftCheck = validateDraftSetup();
   el('start-draft-btn').disabled = !draftCheck.ok;
-  if (check.ok && !draftCheck.ok) showError(draftCheck.reason);
+  // Same priority as above: an unresolved editor error must not be clobbered
+  // by the draft-specific message on an incidental re-render either.
+  if (check.ok && !draftCheck.ok && !(editingId && editingError)) showError(draftCheck.reason);
 }
 
 function nameOf(id) {
