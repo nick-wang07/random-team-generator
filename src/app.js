@@ -401,6 +401,30 @@ function renderRun() {
   teams.replaceChildren(teamColumns(state.run.teams));
 }
 
+function renderDraft() {
+  const teamIndex = currentTeamIndex(state.run);
+  const totalPicks = state.run.order.length;
+  const pickNumber = state.run.turnIndex + 1;
+  el('draft-heading').textContent =
+    `${teamLabel(teamIndex)} picks — pick ${pickNumber} of ${totalPicks}`;
+
+  const pool = el('draft-pool');
+  pool.replaceChildren();
+  for (const id of state.run.pool) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = nameOf(id);
+    button.addEventListener('click', () => {
+      state.run = applyPick(state.run, id);
+      render();
+    });
+    pool.append(button);
+  }
+
+  el('draft-teams').replaceChildren(teamColumns(state.run.teams));
+  el('draft-controls').replaceChildren();
+}
+
 function renderResults() {
   const view = el('results-view');
   view.replaceChildren();
@@ -431,14 +455,25 @@ function renderResults() {
 }
 
 export function render() {
+  if (state.run && state.run.mode === 'captains' && isComplete(state.run)) {
+    const captainIds = state.run.teams.map((team) => team.members[0]);
+    state.run = null;
+    beginDraftFromCaptains(captainIds);
+    return;
+  }
+
   const running = Boolean(state.run);
   const finished = running && isComplete(state.run);
+  const drafting = running && !finished && state.run.mode === 'draft';
+
   el('setup-view').hidden = running;
-  el('run-view').hidden = !running || finished;
+  el('run-view').hidden = !running || finished || drafting;
+  el('draft-view').hidden = !drafting;
   el('results-view').hidden = !finished;
 
   if (!running) renderSetup();
   else if (finished) renderResults();
+  else if (drafting) renderDraft();
   else renderRun();
 }
 

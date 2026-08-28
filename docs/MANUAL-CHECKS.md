@@ -92,9 +92,9 @@ With six people (Alice, Bob, Carol, Dave, Eve, Frank) checked and Teams at 2:
       showed only the remaining four names, with "Spin (4 left)").
 - [x] With "Spin for captains", the wheel spins twice, headings read
       "Spinning for Team A's captain" then "Spinning for Team B's captain".
-- [ ] **Unverifiable as specified — see note below.** After the second
-      captain spin, the draft board appears with both captains seeded and
-      neither still in the pool.
+- [x] **Verified in Task 12** (was unverifiable in Task 11 — see note below).
+      After the second captain spin, the draft board appears with both
+      captains seeded and neither still in the pool.
 - [x] Unchecking a present person also drops them as a captain (unchecking
       Alice while she was a selected captain removed her from the captain
       list entirely and dropped the selected count back to 1).
@@ -103,15 +103,50 @@ With six people (Alice, Bob, Carol, Dave, Eve, Frank) checked and Teams at 2:
       resets to "Spin for captains" even though "Choose captains" was
       selected before the refresh.
 
-**Note on the unverifiable check:** Per the task-11 pre-flight ruling, this
-task deliberately does not insert the `render()` block that routes a
-finished `mode: 'captains'` run into `beginDraftFromCaptains` — Task 12
-restates the entire `render()` function including that routing, and adding
-it here would cause a double-insertion. Without that routing, a completed
-captain-spin run currently falls through to the ordinary "finished run"
-branch and renders the results view (a "Teams" heading with a one-person
-Team A/Team B and a Discord-copy button) instead of the draft board. What
-*is* verified: the underlying run mechanics are correct — the second spin's
-winner is a different person than the first, both are removed from the
-pool immediately after their spin, and each is seeded onto the correct
-team. The board itself is Task 12's deliverable.
+**Note on the now-verified check:** Task 11 could not verify this because
+its `render()` deliberately omitted the routing block that turns a finished
+`mode: 'captains'` run into a `beginDraftFromCaptains` call — Task 12 owns
+that block (see the Draft board section below). With Task 12's `render()`
+in place, completing the second captain spin now correctly transitions
+straight to the draft board instead of falling through to the results view.
+Confirmed in the browser: after two spins each seed the winning captain
+onto their team and leave the pool, `render()` detects the completed
+`captains` run, calls `beginDraftFromCaptains`, and the draft board appears
+with the two captains already seeded and the remaining four names as pool
+buttons.
+
+## Draft board
+
+With six people (Alice, Bob, Carol, Dave, Eve, Frank) checked and Teams at 2,
+hand-picked captains (Alice for Team A, Bob for Team B):
+
+- [x] The board shows the four non-captains (Carol, Dave, Eve, Frank) as
+      large buttons.
+- [x] The heading reads "Team A picks — pick 1 of 4".
+- [x] Clicking a name (Carol) moves it into Team A and the heading advances
+      to "Team B picks — pick 2 of 4".
+- [x] In **snake** order the sequence of picking teams is A, B, B, A.
+- [x] In **alternating** order (same roster, re-drafted) it is A, B, A, B.
+- [x] A clicked name disappears from the pool immediately and cannot be
+      picked twice (the pool button is removed from the DOM on each pick).
+- [x] After the last pick the results view appears with all six people
+      placed (Team A: Alice, Carol, Frank; Team B: Bob, Dave, Eve).
+- [x] With 3 teams and 9 people (P1-P9, captains P1/P2/P3), snake picks run
+      A, B, C, C, B, A, ending with 3 people on each team.
+
+With "Spin for captains" (six people, Teams at 2) — this is the check Task
+11 could not verify:
+
+- [x] After the second captain spin completes, `render()` routes the
+      finished `mode: 'captains'` run into `beginDraftFromCaptains` and the
+      draft board appears: both captains already seeded onto their teams,
+      neither in the pool, heading reads "Team A picks — pick 1 of 4", and
+      the remaining four names show as pool buttons. Completing the draft
+      from there ends on the results view with all six people placed.
+      (The wheel's spin animation itself does not run in this sandbox — its
+      `requestAnimationFrame` loop is suspended because the automation tab
+      reports `visibilityState: 'hidden'`, a pre-existing environmental
+      limitation, not specific to this check. The pick was applied through
+      the app's real, running `render()` and the real `applyPick` from
+      `src/run.js` — the exact functions `spinOnce()` calls — so the
+      routing logic under test ran unmodified in the live page.)
