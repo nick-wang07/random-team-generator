@@ -1,5 +1,14 @@
 function defaultMakeId() {
-  return crypto.randomUUID();
+  // crypto.randomUUID() requires a secure context (https:, or localhost).
+  // It's fine on GitHub Pages and on localhost, but a host who serves this
+  // folder and opens it from another machine on the LAN (http://192.168.x.x)
+  // gets a throw on every add. Ids only need to be unique within one roster
+  // and are never security-relevant, so fall back to a timestamp plus a
+  // random suffix rather than requiring a secure context.
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
 export function normalizeName(name) {

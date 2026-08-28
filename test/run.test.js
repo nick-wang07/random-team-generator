@@ -83,6 +83,22 @@ test('undo unwinds repeatedly back to the start', () => {
   assert.equal(run.turnIndex, 0);
 });
 
+test('undo from a non-trivial middle index restores the exact pool order', () => {
+  let run = wheelRun(['a', 'b', 'c', 'd']);
+  run = applyPick(run, 'c'); // pool index 2 of [a, b, c, d]
+  assert.deepEqual(run.pool, ['a', 'b', 'd']);
+  run = applyPick(run, 'a'); // pool index 0 of [a, b, d]
+  assert.deepEqual(run.pool, ['b', 'd']);
+
+  run = undoPick(run);
+  assert.deepEqual(run.pool, ['a', 'b', 'd']);
+  assert.deepEqual(run.teams.map((t) => t.members), [['c'], []]);
+
+  run = undoPick(run);
+  assert.deepEqual(run.pool, ['a', 'b', 'c', 'd']);
+  assert.deepEqual(run.teams.map((t) => t.members), [[], []]);
+});
+
 test('undo never removes a seeded captain', () => {
   const run = startRun({
     mode: 'draft', present: ['a', 'b', 'c', 'd'], teamCount: 2,

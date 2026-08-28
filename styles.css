@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #14161c;
   --panel: #1e212b;
   --line: #2f3442;
@@ -94,7 +95,11 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .winner-banner {
   text-align: center; font-size: 30px; font-weight: 700;
   color: var(--accent); margin: 0 0 20px; min-height: 40px;
+  /* Always occupies its min-height; visibility (not display) toggles it so
+     the run controls below never jump when a winner is announced. */
+  visibility: hidden;
 }
+.winner-banner.visible { visibility: visible; }
 .wheel-wrap { display: flex; justify-content: center; margin: 12px 0 24px; }
 #wheel-canvas { width: min(600px, 80vw); height: auto; aspect-ratio: 1; }
 .team-columns { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 28px; }

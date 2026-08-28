@@ -285,7 +285,15 @@ function startWheelRun() {
     teamCount: state.config.teamCount,
     order: pickRotation(present.length, state.config.teamCount),
   });
-  el('winner-banner').hidden = true;
+  // A rename that failed to commit (blur-rejected) can leave the editor
+  // logically open right up to the moment the host clicks a Start button in
+  // the same gesture. Starting a run abandons whatever row was mid-edit, so
+  // clear the flags here rather than let "Back to setup" reopen that row
+  // with the rejected text and a stale error over setup validation.
+  editingId = null;
+  editingDraft = null;
+  editingError = null;
+  hideBanner();
   render();
 }
 
@@ -299,10 +307,16 @@ function beginDraftFromCaptains(captainIds) {
     order: draftSequence(teamCount, present.length - teamCount, state.config.draftOrder),
     seeded: captainIds.map((id) => [id]),
   });
+  hideBanner();
   render();
 }
 
 function startDraft() {
+  // See the matching comment in startWheelRun: starting any run abandons
+  // whatever roster row was mid-edit, so clear the editor flags here too.
+  editingId = null;
+  editingDraft = null;
+  editingError = null;
   if (state.config.captainMode === 'choose') {
     beginDraftFromCaptains(state.captains);
     return;
@@ -324,10 +338,22 @@ function setControlsEnabled(enabled) {
   }
 }
 
+// The banner uses visibility (not the `hidden` attribute/display:none) so its
+// reserved min-height stays in the layout at all times — toggling display
+// would yank the run controls below it up and down by ~50px on every spin.
+function hideBanner() {
+  const banner = el('winner-banner');
+  banner.classList.remove('visible');
+  // Clear the text too, not just hide visually — otherwise a stale winner
+  // name sits in the DOM, readable via inspection/selection, while merely
+  // invisible on screen.
+  banner.textContent = '';
+}
+
 function announce(message) {
   const banner = el('winner-banner');
   banner.textContent = message;
-  banner.hidden = false;
+  banner.classList.add('visible');
 }
 
 async function spinOnce() {
@@ -338,7 +364,7 @@ async function spinOnce() {
   const teamName = teamLabel(currentTeamIndex(state.run));
   const plan = planSpin(state.run.pool.length, winnerIndex);
 
-  el('winner-banner').hidden = true;
+  hideBanner();
   setControlsEnabled(false);
   try {
     await wheel.spinTo(plan.stopAngleDeg);
@@ -360,7 +386,7 @@ function undoLast() {
   if (wheel.isSpinning()) return;
   if (!state.run || state.run.history.length === 0) return;
   state.run = undoPick(state.run);
-  el('winner-banner').hidden = true;
+  hideBanner();
   render();
 }
 
@@ -540,7 +566,14 @@ el('add-form').addEventListener('submit', (event) => {
 });
 
 el('team-count').addEventListener('input', () => {
-  state.config.teamCount = Number(el('team-count').value);
+  const raw = el('team-count').value;
+  // An empty field (host clearing the box to retype) is not "0 teams" — bail
+  // out without persisting or re-rendering so the host can keep typing.
+  // renderSetup() would otherwise write "0" straight back into the field on
+  // the next render, and a refresh mid-edit would reopen the app looking
+  // broken with 0 teams saved.
+  if (raw === '') return;
+  state.config.teamCount = Number(raw);
   persist();
   render();
 });

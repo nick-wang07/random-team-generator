@@ -23,6 +23,8 @@ by the browser under that scheme.
 
     npm test
 
+Requires Node 20 or later (uses Node's built-in test runner).
+
 Pure logic (`teams`, `draft`, `run`, `roster`, `rng`, `format`, `storage`) is
 covered by Node's built-in test runner. The canvas wheel and the DOM wiring are
 verified by hand against `docs/MANUAL-CHECKS.md`.

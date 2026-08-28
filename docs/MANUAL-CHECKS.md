@@ -38,6 +38,16 @@
       rejected-name error displays the add error, not the stale editor error,
       and that stale error does not resurface on the next unrelated render.
 
+**Known quirk (accepted, not a bug):** moving from a valid, uncommitted open
+editor straight to another row's name — clicking row B's name while row A's
+editor is still open with unsaved text — takes two clicks on row B. The first
+click fires a blur on row A's `<input>`, which commits A and rebuilds the
+roster list (`render()` → `renderRoster()`) out from under the click; the
+second click lands on the freshly-rebuilt row B and opens its editor. The
+obvious fix (open the editor on `mousedown` instead of `click`) would reorder
+commit-vs-open inside the inline-rename mechanism, which already cost two
+review rounds to get right, so it is deliberately not being changed.
+
 ## Wheel run and results
 
 With six people checked and Teams at 2:
