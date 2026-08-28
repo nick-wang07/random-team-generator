@@ -254,7 +254,14 @@ async function spinOnce() {
 
   el('winner-banner').hidden = true;
   setControlsEnabled(false);
-  await wheel.spinTo(plan.stopAngleDeg);
+  try {
+    await wheel.spinTo(plan.stopAngleDeg);
+  } finally {
+    // Restored on every path, including a rejected/aborted spin, so a
+    // failure never leaves the controls stuck disabled with the winner
+    // already drawn but nowhere applied.
+    setControlsEnabled(true);
+  }
 
   state.run = applyPick(state.run, winnerId);
   render();

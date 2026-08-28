@@ -94,6 +94,12 @@ export function createWheel(canvas) {
 
   const SPIN_MS = 4000;
   let spinning = false;
+  // The in-flight animation frame and the resolver for the spin currently
+  // running, so a second spinTo() call (no caller today does this — app.js
+  // guards with isSpinning() first — but a future caller might not) can
+  // cancel the stale loop instead of letting two loops fight over `rotation`.
+  let activeFrame = null;
+  let resolveActive = null;
 
   // Cubic ease-out: fast off the line, creeping into the final degree.
   function easeOut(t) {
@@ -101,26 +107,37 @@ export function createWheel(canvas) {
   }
 
   function spinTo(stopAngleDeg, durationMs = SPIN_MS) {
+    if (spinning) {
+      // Supersede the stale spin: stop its loop from writing `rotation` out
+      // from under this one, and let its caller's await settle rather than
+      // hang forever.
+      cancelAnimationFrame(activeFrame);
+      resolveActive();
+    }
+
     const from = rotation;
     const distance = stopAngleDeg - from;
     spinning = true;
     return new Promise((resolve) => {
+      resolveActive = resolve;
       const started = performance.now();
       function frame(now) {
         const t = Math.min(1, (now - started) / durationMs);
         rotation = from + distance * easeOut(t);
         draw();
         if (t < 1) {
-          requestAnimationFrame(frame);
+          activeFrame = requestAnimationFrame(frame);
         } else {
           // Normalise so the next spin's 4-to-6 turns start from a small angle.
           rotation = ((stopAngleDeg % 360) + 360) % 360;
           draw();
           spinning = false;
+          activeFrame = null;
+          resolveActive = null;
           resolve();
         }
       }
-      requestAnimationFrame(frame);
+      activeFrame = requestAnimationFrame(frame);
     });
   }
 
