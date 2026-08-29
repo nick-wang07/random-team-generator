@@ -419,7 +419,11 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
    product title rather than a status heading, so it gets to sit like one. */
 #setup-view h1 { flex: none; text-align: center; }
 #setup-view .storage-notice, #setup-view > .notice { text-align: center; }
-#setup-view .setup-columns { flex: 1 1 auto; min-height: 0; }
+/* Shrink but never grow: the pair is only as tall as its tallest content, and
+   drops to whatever the window allows if that is less. Filling the window
+   instead left the wheel's handful of options rattling around in a panel
+   twice the height it needed. */
+#setup-view .setup-columns { flex: 0 1 auto; min-height: 0; max-height: 100%; }
 #setup-view .roster-panel,
 #setup-view .config-panel {
   max-height: 100%;
@@ -433,9 +437,16 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
 #setup-view .roster-panel .panel-head,
 #setup-view .roster-panel .removal-notice,
 #setup-view .roster-panel .add-form { flex: none; }
-#setup-view .roster-panel .roster-list {
-  flex: 1 1 auto; min-height: 0; max-height: none;
-}
+/* Fills the panel, but never past the cap that decides how tall the pair gets
+   to be. The config panel's scrolling region carries the same cap, so neither
+   panel can drag the pair taller than the other. */
+#setup-view .roster-panel .roster-list { flex: 1 1 auto; min-height: 0; }
+#setup-view .config-scroll { max-height: min(52vh, 560px); }
+
+/* Whichever panel is the shorter of the two takes the slack. Its foot stays
+   on the shared baseline rather than floating up under its own content. */
+#setup-view .roster-panel .add-form,
+#setup-view .config-panel .split-preview { margin-top: auto; }
 
 /* The config panel scrolls its options, but the preview, any error and the
    start button stay pinned at the bottom — scrolling to find "Start" is the
