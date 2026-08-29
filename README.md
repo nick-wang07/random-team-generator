@@ -49,6 +49,21 @@ This is a zero-build, zero-dependency vanilla ES module app — the browser load
 `index.html` straight off disk (`file://`) will not work; modules are blocked by
 the browser under that scheme.
 
+## How it is put together
+
+`src/app.js` owns the state and decides which of the four screens is showing.
+Everything else is either a screen or a piece of pure logic:
+
+| | |
+|---|---|
+| `roster-panel`, `setup-view`, `run-view`, `draft-view`, `results-view` | one screen (or panel) each, built as `create…({ state, render, … })` |
+| `wheel`, `reveal`, `team-view`, `team-board`, `run-controls`, `dom` | shared pieces the screens build with |
+| `roster`, `teams`, `run`, `rng`, `draft`, `format`, `storage` | pure logic, no DOM, fully tested |
+
+Every screen is handed `render` rather than redrawing itself, so a change
+anywhere redraws the whole app from state — there is no partial-update path to
+get out of sync.
+
 ## Tests
 
     npm test
@@ -56,6 +71,6 @@ the browser under that scheme.
 Requires Node 20 or later (uses Node's built-in test runner). There are no
 dependencies to install, including for tests.
 
-The pure logic — `teams`, `draft`, `run`, `roster`, `rng`, `format`, `storage` —
-is covered by automated tests. The canvas wheel and the DOM wiring have no
-automated coverage by design and are verified by hand in a browser.
+The pure logic in the bottom row of the table above is covered by automated
+tests. The canvas wheel and the screen modules have no automated coverage by
+design and are verified by hand in a browser.

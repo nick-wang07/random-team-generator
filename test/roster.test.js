@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  normalizeName, addPerson, removePerson, renamePerson, prunePresent, findPerson,
+  normalizeName, addPerson, removePerson, renamePerson, prunePresent, findPerson, displayName,
 } from '../src/roster.js';
 
 // Deterministic ids keep the assertions readable.
@@ -76,4 +76,10 @@ test('findPerson returns the person or undefined', () => {
   const roster = addPerson([], 'Nick', counter());
   assert.equal(findPerson(roster, 'id1').name, 'Nick');
   assert.equal(findPerson(roster, 'nope'), undefined);
+});
+
+test('displayName finds a name, and names the gap when it cannot', () => {
+  const roster = [{ id: 'a', name: 'Andrew' }];
+  assert.equal(displayName(roster, 'a'), 'Andrew');
+  assert.equal(displayName(roster, 'nobody'), '(unknown)');
 });

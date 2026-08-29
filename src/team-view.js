@@ -1,4 +1,4 @@
-import { findPerson } from './roster.js';
+import { displayName } from './roster.js';
 import { teamHasWalt, commiserate } from './format.js';
 
 // Builds the team columns shared by the wheel screen, the draft board and the
@@ -10,8 +10,6 @@ import { teamHasWalt, commiserate } from './format.js';
 // leaving that to the heading alone. `slots` pads each team out to the size
 // it will end up, so empty columns read as waiting rather than as broken.
 export function teamColumns(teams, { roster, activeIndex = null, slots = null } = {}) {
-  const nameOf = (id) => findPerson(roster, id)?.name ?? '(unknown)';
-
   const wrap = document.createElement('div');
   wrap.className = 'team-columns';
 
@@ -26,7 +24,7 @@ export function teamColumns(teams, { roster, activeIndex = null, slots = null } 
     const list = document.createElement('ul');
     list.append(...team.members.map((id) => {
       const li = document.createElement('li');
-      li.textContent = commiserate(nameOf(id), hasWalt);
+      li.textContent = commiserate(displayName(roster, id), hasWalt);
       return li;
     }));
 

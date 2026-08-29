@@ -50,3 +50,9 @@ export function prunePresent(roster, present) {
 export function findPerson(roster, id) {
   return roster.find((p) => p.id === id);
 }
+
+// A name to show on screen for an id. Every view needs this and none of them
+// should decide for itself what an id with no person behind it looks like.
+export function displayName(roster, id) {
+  return findPerson(roster, id)?.name ?? '(unknown)';
+}

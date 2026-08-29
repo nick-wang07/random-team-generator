@@ -2,7 +2,8 @@
 // teams or the roster — it is handed two strings and told to hold the screen
 // until someone is done reading them.
 //
-// One of only two modules allowed to touch the DOM (the other is wheel.js).
+// Like every other view module here, it is handed its nodes rather than
+// looking them up, so it has no opinion about the page it lives on.
 
 const REVEAL_MS = 2500;
 
