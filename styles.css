@@ -467,7 +467,15 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
    of content. The vh half is what shrinks it on smaller screens, and is set
    so the pixel cap still wins at 1080 tall. */
 #setup-view .roster-panel .roster-list,
-#setup-view .config-scroll { flex: 1 1 auto; min-height: 0; max-height: min(56vh, 600px); }
+#setup-view .config-scroll {
+  flex: 1 1 auto; min-height: 0;
+  max-height: min(56vh, 600px);
+  /* Both of them, spelled out here. The roster list also picks this up from
+     its own base rule, which is how dropping it from this pair once left the
+     config panel silently overflowing its box instead of scrolling: the left
+     side still worked, so the pair looked fine at a glance. */
+  overflow-y: auto;
+}
 #setup-view .panel-foot-group { margin-top: auto; }
 /* The spacing under a scrolling region belongs to the foot, not to the region
    itself. As a margin on the roster list only, it made that box 16px shorter
