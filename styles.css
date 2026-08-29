@@ -264,9 +264,10 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 }
 .panel-head h2 { margin: 0; }
 
-/* Reset lives at the far bottom corner, deliberately out of the way: it is
-   the only button here that throws away the whole list. */
-.panel-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+/* Reset lives under the add form, its left edge on the same line as the name
+   box above it. Muted rather than prominent: it is the only button here that
+   throws away the whole list. */
+.panel-foot { display: flex; justify-content: flex-start; margin-top: 10px; }
 .panel-foot .link-btn { color: var(--muted); font-weight: 500; }
 .panel-foot .link-btn:hover { color: var(--danger); }
 .presence { display: flex; align-items: baseline; gap: 12px; }
