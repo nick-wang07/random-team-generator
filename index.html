@@ -26,13 +26,19 @@
         </div>
         <ul id="roster-list" class="roster-list"></ul>
         <div class="panel-foot-group">
-          <p id="removal-notice" class="removal-notice" hidden></p>
           <form id="add-form" class="add-form">
             <input id="name-input" type="text" placeholder="Add a name" autocomplete="off">
             <button id="add-btn" type="submit">Add</button>
           </form>
+          <!-- The undo notice shares the reset button's line. It used to have a
+               line of its own above the add form, which meant the left foot grew
+               by a whole row the moment you removed someone — and since subgrid
+               sizes both panels' scroll boxes off the feet, both boxes jumped
+               shorter. Sharing this row, the foot is the same height whether the
+               notice is showing or not. -->
           <div class="panel-foot">
-            <button id="reset-roster-btn" type="button" class="reset-btn">Reset to default list</button>
+            <button id="reset-roster-btn" type="button" class="quiet-btn reset-btn">Reset to default list</button>
+            <p id="removal-notice" class="removal-notice" hidden></p>
           </div>
         </div>
       </div>
@@ -43,46 +49,60 @@
              the two panels' scroll boxes start and end on the same lines. -->
         <h2>How are you picking teams?</h2>
         <div class="config-scroll">
-        <div class="mode-choice">
-          <label class="mode-card">
-            <input type="radio" name="pick-mode" value="wheel" checked>
-            <span class="mode-card-face">
-              <span class="mode-title">Wheel</span>
-              <span class="mode-desc">Spin for one name at a time. Teams fill in turn.</span>
-            </span>
-          </label>
-          <label class="mode-card">
-            <input type="radio" name="pick-mode" value="draft">
-            <span class="mode-card-face">
-              <span class="mode-title">Captain draft</span>
-              <span class="mode-desc">Captains take turns picking their teammates.</span>
-            </span>
-          </label>
-        </div>
+          <div class="mode-choice">
+            <label class="mode-card">
+              <input type="radio" name="pick-mode" value="wheel" checked>
+              <span class="mode-card-face">
+                <span class="mode-title">Wheel</span>
+                <span class="mode-desc">Spin for one name at a time. Teams fill in turn.</span>
+              </span>
+            </label>
+            <label class="mode-card">
+              <input type="radio" name="pick-mode" value="draft">
+              <span class="mode-card-face">
+                <span class="mode-title">Captain draft</span>
+                <span class="mode-desc">Captains take turns picking their teammates.</span>
+              </span>
+            </label>
+          </div>
 
-        <div class="field-row">
-          <label for="team-count">Teams</label>
-          <input id="team-count" type="number" min="2" max="8" value="2">
-        </div>
+          <div class="field-row">
+            <label for="team-count">Teams</label>
+            <input id="team-count" type="number" min="2" max="8" value="2">
+          </div>
 
-        <div id="draft-config" hidden>
-          <fieldset class="draft-options">
-            <legend>Pick order</legend>
-            <label><input type="radio" name="draft-order" value="snake" checked> Snake (A B B A)</label>
-            <label><input type="radio" name="draft-order" value="alternating"> Alternating (A B A B)</label>
-          </fieldset>
-          <fieldset class="draft-options">
-            <legend>Captains</legend>
-            <label><input type="radio" name="captain-mode" value="spin" checked> Spin for them</label>
-            <label><input type="radio" name="captain-mode" value="choose"> Choose them</label>
-            <ul id="captain-list" class="roster-list" hidden></ul>
-          </fieldset>
-        </div>
+          <div id="draft-config" hidden>
+            <fieldset class="draft-options">
+              <legend>Pick order</legend>
+              <label><input type="radio" name="draft-order" value="snake" checked> Snake (A B B A)</label>
+              <label><input type="radio" name="draft-order" value="alternating"> Alternating (A B A B)</label>
+            </fieldset>
+            <fieldset class="draft-options">
+              <legend>Captains</legend>
+              <label><input type="radio" name="captain-mode" value="spin" checked> Spin for them</label>
+              <label><input type="radio" name="captain-mode" value="choose"> Choose them</label>
+              <!-- Choosing happens in a dialog, not here. Inline, the roster was
+                   a scrolling checkbox list nested inside an already-scrolling
+                   panel, which is two scrollbars for one gesture. What is left
+                   in the panel is the answer, not the picker. -->
+              <div id="captain-summary" class="captain-summary" hidden>
+                <p id="captain-names" class="captain-names"></p>
+                <button id="choose-captains-btn" type="button" class="quiet-btn">Choose captains…</button>
+              </div>
+            </fieldset>
+          </div>
 
         </div>
         <div class="panel-foot-group">
-          <p id="split-preview" class="split-preview"></p>
-          <p id="setup-error" class="error" hidden></p>
+          <!-- The preview and the error share one line. Neither is ever hidden,
+               so this row is exactly one line tall whether or not there is an
+               error to show, and the foot never changes height. Giving the
+               error a line of its own — even a permanently reserved one — cost
+               ~30px of panel height for a line that is blank most of the time. -->
+          <div class="foot-status">
+            <p id="split-preview" class="split-preview"></p>
+            <p id="setup-error" class="error" role="alert"></p>
+          </div>
           <div class="start-buttons">
             <button id="start-wheel-btn" type="button">Spin the wheel</button>
             <button id="start-draft-btn" type="button" hidden>Start the draft</button>
@@ -115,6 +135,22 @@
         <p id="reveal-team" class="reveal-team"></p>
       </div>
     </div>
+    <!-- Native <dialog>, so focus trapping, Escape and the backdrop come from
+         the platform rather than being reimplemented. Lives outside the view
+         sections for the same reason the reveal card does. -->
+    <dialog id="captain-dialog" class="captain-dialog">
+      <form method="dialog" class="captain-dialog-form">
+        <div class="captain-dialog-head">
+          <h2 id="captain-dialog-title">Pick captains</h2>
+          <p id="captain-dialog-count" class="captain-dialog-count" aria-live="polite"></p>
+        </div>
+        <div id="captain-chips" class="captain-chips"></div>
+        <div class="captain-dialog-foot">
+          <button value="done">Done</button>
+        </div>
+      </form>
+    </dialog>
+
     <section id="draft-view" class="view" hidden>
       <h2 id="draft-heading" class="turn-heading"></h2>
       <div id="draft-order-strip" class="order-strip"></div>

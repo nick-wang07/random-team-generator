@@ -34,3 +34,15 @@ export function validateSetup({ presentCount, teamCount }) {
   }
   return { ok: true };
 }
+
+// Toggle one person in or out of the captain set, refusing to grow it past
+// `limit`. Returns a new array; never mutates the one it is handed.
+//
+// Removal is always allowed, including when the set is already full — the
+// picker disables the unchosen chips at the limit, so if removal were blocked
+// too a complete set would be frozen with no way back.
+export function toggleCaptain(captains, id, limit) {
+  if (captains.includes(id)) return captains.filter((x) => x !== id);
+  if (captains.length >= limit) return captains;
+  return [...captains, id];
+}

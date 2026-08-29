@@ -6,7 +6,8 @@ teams. Built to be screen-shared: dark, large, and readable from a stream.
 - **Wheel mode** — spin once per person; each winner joins the next team in
   rotation. The wheel holds on the winner before they leave it.
 - **Captain draft** — captains are spun for or hand-picked, then take turns
-  choosing teammates in snake or alternating order.
+  choosing teammates in snake or alternating order. Hand-picking opens a
+  dialog; the panel keeps only the names chosen.
 
 Both modes finish on a results screen with a **Copy for Discord** button that
 formats the teams for pasting straight into chat.
@@ -42,14 +43,21 @@ full spin would have.
 
 ## Running it
 
-Open `index.html` through any static server:
+    npm start
 
-    python -m http.server 8080
+Then open <http://localhost:8777>. Pass a port if that one is taken
+(`npm start -- 8778`), and `npm run serve:who` names the process holding it.
 
 This is a zero-build, zero-dependency vanilla ES module app — the browser loads
 `src/app.js` and its imports directly, which requires `http://`. Opening
 `index.html` straight off disk (`file://`) will not work; modules are blocked by
 the browser under that scheme.
+
+`scripts/serve.js` is a ~40-line static server using nothing but Node's own
+modules. It exists rather than a one-line `python -m http.server` because it
+sends `Cache-Control: no-store`: Chrome otherwise holds on to `styles.css`
+across reloads and you edit CSS, reload, and see the previous version. Any
+static server will do if you would rather use your own.
 
 ## How it is put together
 
@@ -59,7 +67,7 @@ Everything else is either a screen or a piece of pure logic:
 | | |
 |---|---|
 | `roster-panel`, `setup-view`, `run-view`, `draft-view`, `results-view` | one screen (or panel) each, built as `create…({ state, render, … })` |
-| `wheel`, `reveal`, `team-view`, `team-board`, `run-controls`, `dom` | shared pieces the screens build with |
+| `wheel`, `reveal`, `captain-picker`, `team-view`, `team-board`, `run-controls`, `dom` | shared pieces the screens build with |
 | `roster`, `teams`, `run`, `rng`, `draft`, `format`, `storage` | pure logic, no DOM, fully tested |
 
 Every screen is handed `render` rather than redrawing itself, so a change

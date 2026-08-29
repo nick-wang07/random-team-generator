@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  teamSizes, pickRotation, teamLabel, createTeams, validateSetup, MAX_TEAMS,
+  teamSizes, pickRotation, teamLabel, createTeams, validateSetup, toggleCaptain, MAX_TEAMS,
 } from '../src/teams.js';
 
 test('the remainder lands on the earliest teams', () => {
@@ -70,4 +70,28 @@ test('validateSetup rejects fewer people than teams', () => {
     validateSetup({ presentCount: 2, teamCount: 3 }).reason,
     'Need at least 3 people for 3 teams',
   );
+});
+
+test('toggleCaptain adds someone who is not yet a captain', () => {
+  assert.deepEqual(toggleCaptain(['a'], 'b', 2), ['a', 'b']);
+});
+
+test('toggleCaptain removes someone who already is one', () => {
+  assert.deepEqual(toggleCaptain(['a', 'b'], 'a', 2), ['b']);
+});
+
+test('toggleCaptain refuses to add past the limit', () => {
+  assert.deepEqual(toggleCaptain(['a', 'b'], 'c', 2), ['a', 'b']);
+});
+
+// Deselecting has to keep working at the limit, or a full set would be a dead
+// end: every chip disabled and no way to change your mind without starting over.
+test('toggleCaptain still removes when the limit is already reached', () => {
+  assert.deepEqual(toggleCaptain(['a', 'b'], 'b', 2), ['a']);
+});
+
+test('toggleCaptain does not mutate the array it is given', () => {
+  const before = ['a'];
+  toggleCaptain(before, 'b', 2);
+  assert.deepEqual(before, ['a']);
 });

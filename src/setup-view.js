@@ -6,7 +6,9 @@ import { validateSetup, teamSizes } from './teams.js';
 // captain options, and the two start buttons. The roster panel down the left
 // is its own module; this one only borrows `openEditorError()` from it, to
 // know whether the shared error line is already spoken for.
-export function createSetupView({ state, render, persist, rosterPanel, showError, onStartWheel, onStartDraft }) {
+export function createSetupView({
+  state, render, persist, rosterPanel, captainPicker, showError, onStartWheel, onStartDraft,
+}) {
   function validateDraftSetup() {
     const base = validateSetup({
       presentCount: state.present.length,
@@ -22,31 +24,28 @@ export function createSetupView({ state, render, persist, rosterPanel, showError
     return { ok: true };
   }
 
-  function renderCaptainList() {
-    const list = el('captain-list');
+  // What the panel shows for "Choose them" is the answer, not the picker: who
+  // is currently a captain, and a way back into the dialog to change it.
+  function renderCaptainSummary() {
     const choosing = state.config.captainMode === 'choose';
-    list.hidden = !choosing;
-    list.replaceChildren();
+    el('captain-summary').hidden = !choosing;
     if (!choosing) return;
-
-    for (const id of state.present) {
-      const li = document.createElement('li');
-      const box = document.createElement('input');
-      box.type = 'checkbox';
-      box.checked = state.captains.includes(id);
-      box.addEventListener('change', () => {
-        state.captains = box.checked
-          ? [...state.captains, id]
-          : state.captains.filter((x) => x !== id);
-        render();
-      });
-      const name = document.createElement('span');
-      name.className = 'name';
-      name.textContent = displayName(state.roster, id);
-      li.append(box, name);
-      list.append(li);
-    }
+    const names = state.captains.map((id) => displayName(state.roster, id));
+    el('captain-names').textContent = names.length
+      ? names.join(', ')
+      : 'No captains chosen yet';
+    // Muted while empty so the panel does not read as though something is
+    // already settled when nothing has been picked.
+    el('captain-names').classList.toggle('is-empty', names.length === 0);
   }
+
+  el('choose-captains-btn').addEventListener('click', () => {
+    captainPicker.open({
+      people: state.present.map((id) => ({ id, name: displayName(state.roster, id) })),
+      captains: state.captains,
+      limit: state.config.teamCount,
+    });
+  });
 
   // "2 teams of 4", or "3 teams: 4, 3, 3" when it does not divide evenly, so
   // the host can sanity-check the team count before committing to it.
@@ -111,7 +110,7 @@ export function createSetupView({ state, render, persist, rosterPanel, showError
       state.captains = state.captains.filter((id) => state.present.includes(id));
 
       rosterPanel.render();
-      renderCaptainList();
+      renderCaptainSummary();
       el('team-count').value = String(state.config.teamCount);
       const check = validateSetup({
         presentCount: state.present.length,
@@ -122,9 +121,9 @@ export function createSetupView({ state, render, persist, rosterPanel, showError
       const editorError = rosterPanel.openEditorError();
       showError(editorError ?? (check.ok ? '' : check.reason));
 
-      // Everything specific to the draft — pick order, captains, the captain
-      // list — stays out of sight until the draft is the chosen mode, and only
-      // the start button for the chosen mode is offered.
+      // Everything specific to the draft — pick order and the captain options —
+      // stays out of sight until the draft is the chosen mode, and only the
+      // start button for the chosen mode is offered.
       const drafting = state.config.pickMode === 'draft';
       el('draft-config').hidden = !drafting;
       el('start-wheel-btn').hidden = drafting;

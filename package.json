@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "node scripts/serve.js",
+    "serve:who": "powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 8777 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Get-Process -Id $_.OwningProcess } | Format-Table Id,ProcessName,StartTime\"",
     "test": "node --test test/*.test.js"
   }
 }

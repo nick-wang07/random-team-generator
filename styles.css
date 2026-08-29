@@ -88,7 +88,15 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .draft-options hr { border: none; border-top: 1px solid var(--line); margin: 10px 0; }
 
 .start-buttons { display: flex; gap: 12px; margin-top: 16px; }
-.error { color: var(--danger); margin: 12px 0 0; }
+/* Both live on .foot-status's single line, which is why neither carries a
+   margin. Toggling the error moved the panel foot, and subgrid passed that
+   straight to the ROSTER's scroll box on the far side of the screen. The row
+   reserves one line; the error drops into it without moving anything. */
+.foot-status {
+  display: flex; align-items: baseline; gap: 12px;
+  min-height: 1lh; margin: 16px 0 0;
+}
+.error { color: var(--danger); margin: 0; min-width: 0; }
 .notice { color: var(--muted); margin: 0 0 20px; }
 
 .turn-heading { font-size: 32px; margin: 0 0 8px; }
@@ -209,7 +217,12 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
    the real control and everyone else gets the card. */
 .config-panel h2 { margin: 0 0 14px; }
 .mode-choice { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
-.mode-card { flex: 1 1 260px; cursor: pointer; }
+/* 180px, not the 260 this used to ask for: the config panel's column is 459px
+   wide, so a 260px basis could never fit two across and the pair silently
+   stacked — 192px of height for two cards that belong side by side. At 180 the
+   two share the column, and a phone-width window still wraps them back to
+   stacked, which is where stacking actually helps. */
+.mode-card { flex: 1 1 180px; cursor: pointer; }
 .mode-card input { position: absolute; opacity: 0; width: 0; height: 0; }
 .mode-card-face {
   display: block; height: 100%;
@@ -232,13 +245,24 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 .field-row { display: flex; align-items: center; gap: 12px; }
 .field-row label { font-size: 18px; }
 
-/* The two draft fieldsets sit side by side when there is room; the captain
-   list makes its own column taller, so they align to the top. */
+/* The two draft fieldsets sit side by side, each only as tall as the radios
+   it holds. They are deliberately NOT stretched to fill the panel's spare
+   height: a fieldset grown to 319px around two radio buttons is a box with
+   dead air in it, and centring the radios inside only moves the dead air
+   above and below them. The spare height belongs to the gap under the band,
+   where it costs nothing.
+
+   Nothing here moves the foot. The split preview and the start button live in
+   their own subgrid row pinned to the bottom of the panel, so they hold their
+   position whatever these boxes do. */
 #draft-config { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
 /* `display: flex` above outranks the UA rule behind the hidden attribute, so
    hiding it has to be said explicitly or the draft options never go away. */
 #draft-config[hidden] { display: none; }
-#draft-config .draft-options { flex: 1 1 260px; margin: 18px 0 0; }
+/* Same 180px story as the mode cards above: at 260 the two fieldsets could
+   not fit the column and stacked, which was 304px of the 561px that used to
+   overflow the panel. */
+#draft-config .draft-options { flex: 1 1 180px; margin: 18px 0 0; }
 #draft-config .roster-list { margin: 12px 0 0; }
 
 /* Setup in two columns: the roster on the left, everything about how to pick
@@ -269,12 +293,25 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
    label text and nobody could tell it was clickable — but muted rather than
    filled, because it is the only button here that throws the whole list away.
    It turns red on approach, which is the only warning it gives. */
-.panel-foot { display: flex; justify-content: flex-start; margin-top: 10px; }
-.reset-btn {
+/* The reset button and the undo notice share this row. Wrapping is allowed so
+   a long name in "Removed <name>." drops to its own line rather than pushing
+   the notice out past the panel edge. */
+.panel-foot {
+  display: flex; align-items: center; flex-wrap: wrap;
+  justify-content: flex-start; gap: 12px; margin-top: 10px;
+}
+/* The quiet outline button: muted, but unmistakably a button. Used alone for a
+   plain secondary action, or with .reset-btn for a destructive one. */
+.quiet-btn {
   background: none; color: var(--muted);
   border: 1px solid var(--line); border-radius: 8px;
   padding: 7px 13px; font-size: 15px;
 }
+.quiet-btn:hover, .quiet-btn:focus-visible { border-color: var(--muted); color: var(--text); }
+/* Red on approach is the only warning the reset gives, so it belongs to the
+   reset alone. "Choose captains…" borrowed .reset-btn for its look and
+   inherited the danger colour with it — a button that turns red on hover to
+   open a picker reads as though it is about to throw something away. */
 .reset-btn:hover, .reset-btn:focus-visible {
   border-color: var(--danger); color: var(--danger);
 }
@@ -294,7 +331,7 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
   margin-bottom: 14px;
 }
 
-.split-preview { color: var(--muted); margin: 16px 0 0; font-size: 16px; }
+.split-preview { color: var(--muted); margin: 0; font-size: 16px; white-space: nowrap; }
 
 /* Below roughly a laptop width the columns stop helping and stack. */
 @media (max-width: 900px) {
@@ -399,16 +436,20 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
    waypoint for keyboard users, not a visible box around a title. */
 [tabindex="-1"]:focus { outline: none; }
 
+/* Sits on the reset button's row, so it carries no margin of its own and
+   min-width: 0 lets its text wrap inside the row instead of forcing the row
+   wider than the panel. */
 .removal-notice {
   display: flex; align-items: baseline; gap: 10px;
-  margin: 0 0 14px; color: var(--muted); font-size: 15px;
+  min-width: 0; margin: 0; color: var(--muted); font-size: 15px;
 }
 
-/* The captain list used to carry its own height cap, back when it could push
-   setup over the fold. The panel around it is bounded and scrolls now, so the
-   cap only bought a scrollbar inside a scrollbar — two of them side by side,
-   nested, for the same gesture. The panel does the scrolling. */
-#captain-list { margin: 12px 0 0; }
+/* Captains, as the panel shows them: the names that have been picked, and the
+   way back into the dialog. The inline checkbox list this replaced put a
+   scrolling roster inside an already-scrolling panel. */
+.captain-summary { margin: 12px 0 0; }
+.captain-names { margin: 0 0 10px; font-size: 16px; }
+.captain-names.is-empty { color: var(--muted); font-style: italic; }
 
 /* On the wheel screen the highlighted team is not choosing anyone — it is
    the team this spin will fill — so it gets its own wording. */
@@ -461,21 +502,22 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
 /* Each fills its panel, but never past the cap that decides how tall the pair
    gets to be, so neither panel can drag the pair taller than the other.
 
-   The pixel half of the cap is set by the tallest thing that should never
-   need scrolling: the draft options with captains spun for, which come to
-   561px. At 560 that scrolled by a single pixel — a scrollbar for one pixel
-   of content. The vh half is what shrinks it on smaller screens, and is set
-   so the pixel cap still wins at 1080 tall. */
+   Both of them get overflow-y spelled out here. The roster list also picks it
+   up from its own base rule, which is how dropping it from this pair once left
+   the config panel silently overflowing its box instead of scrolling: the left
+   side still worked, so the pair looked fine at a glance. */
 #setup-view .roster-panel .roster-list,
 #setup-view .config-scroll {
   flex: 1 1 auto; min-height: 0;
-  max-height: min(56vh, 600px);
-  /* Both of them, spelled out here. The roster list also picks this up from
-     its own base rule, which is how dropping it from this pair once left the
-     config panel silently overflowing its box instead of scrolling: the left
-     side still worked, so the pair looked fine at a glance. */
   overflow-y: auto;
 }
+/* The cap is the roster's alone. It is the list that grows without bound, so
+   it is the list that needs a ceiling; the config panel's options are a fixed
+   set and now fit the shared row on their own. Applied to both, the cap was
+   simply the thing putting a scrollbar on the draft options — it cut the box
+   to 512px on a 945px-tall window while the content wanted 561. Config keeps
+   overflow-y above as a safety net for a very short window. */
+#setup-view .roster-panel .roster-list { max-height: min(56vh, 600px); }
 #setup-view .panel-foot-group { margin-top: auto; }
 /* The spacing under a scrolling region belongs to the foot, not to the region
    itself. As a margin on the roster list only, it made that box 16px shorter
@@ -483,7 +525,7 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
    row — which is every window small enough to squeeze the panels. */
 #setup-view .roster-panel .roster-list,
 #setup-view .config-scroll { margin-bottom: 0; }
-#setup-view .config-panel .split-preview { margin-top: 0; }
+#setup-view .config-panel .foot-status { margin-top: 0; }
 #setup-view .panel-foot-group { padding-top: 16px; }
 
 /* The two feet hold different things — an add box and a reset button on the
@@ -509,3 +551,49 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
     #setup-view .panel-foot-group { margin-top: 0; }
   }
 }
+
+/* The captain picker. Sized to its content up to a cap, so a fourteen-person
+   roster and a four-person one both look deliberate rather than one being a
+   sliver and the other a wall. */
+.captain-dialog {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 64px);
+}
+.captain-dialog::backdrop { background: rgb(6 8 12 / 0.66); }
+.captain-dialog-form { display: flex; flex-direction: column; max-height: inherit; }
+.captain-dialog-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; padding: 20px 22px 14px;
+}
+.captain-dialog-head h2 { margin: 0; }
+.captain-dialog-count { margin: 0; color: var(--muted); font-size: 15px; white-space: nowrap; }
+/* The one place a scrollbar is welcome: it is the dialog's own list, not a
+   list nested inside another scrolling box. */
+.captain-chips {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  padding: 0 22px 4px; overflow-y: auto; min-height: 0;
+}
+.captain-dialog-foot {
+  display: flex; justify-content: flex-end;
+  padding: 16px 22px 20px;
+}
+
+.captain-chip {
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 10px 18px; font-size: 17px; font-weight: 400;
+}
+.captain-chip:hover:not(:disabled) { border-color: var(--muted); }
+.captain-chip[aria-pressed="true"] {
+  border-color: var(--accent); color: var(--accent); font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg));
+}
+/* Disabled means "the set is full", not "this person is ineligible" — so it
+   fades rather than looking broken, and the chosen chips stay bright. */
+.captain-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+

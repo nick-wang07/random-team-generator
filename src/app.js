@@ -5,6 +5,7 @@ import { pickRotation } from './teams.js';
 import { startRun, isComplete } from './run.js';
 import { createWheel } from './wheel.js';
 import { createReveal } from './reveal.js';
+import { createCaptainPicker } from './captain-picker.js';
 import { draftSequence } from './draft.js';
 import { createRosterPanel } from './roster-panel.js';
 import { createSetupView } from './setup-view.js';
@@ -41,13 +42,18 @@ function persist() {
   store.save({ roster: state.roster, present: state.present, config: state.config });
 }
 
+// The error is never hidden — it shares one always-present line with the split
+// preview (see .foot-status). It used to toggle `hidden`, which changed the
+// height of the config panel's foot, and because subgrid pins both setup panels
+// to the same three rows, that resized the ROSTER's scroll box on the other
+// side of the screen: picking "Choose them" made the roster list jump 34px
+// shorter, as did any other error.
 function showError(message) {
-  const box = el('setup-error');
-  box.textContent = message;
-  box.hidden = !message;
+  el('setup-error').textContent = message;
 }
 
 const wheel = createWheel(el('wheel-canvas'));
+
 window.addEventListener('resize', () => { wheel.resize(); wheel.draw(); });
 // Click the wheel to cut a spin short. It lands on the same angle either way,
 // so this only skips the wait — it cannot change who won.
@@ -65,11 +71,24 @@ const reveal = createReveal({
 const isBusy = () => wheel.isSpinning() || reveal.isRevealing();
 
 const rosterPanel = createRosterPanel({ state, persist, render, showError });
+const captainPicker = createCaptainPicker({
+  dialog: el('captain-dialog'),
+  title: el('captain-dialog-title'),
+  count: el('captain-dialog-count'),
+  chips: el('captain-chips'),
+  // Picks commit as they are made, the same as the roster's own checkboxes;
+  // "Done" only closes the dialog.
+  onChange: (captains) => {
+    state.captains = captains;
+    render();
+  },
+});
 const setupView = createSetupView({
   state,
   render,
   persist,
   rosterPanel,
+  captainPicker,
   showError,
   onStartWheel: startWheelRun,
   onStartDraft: startDraft,
