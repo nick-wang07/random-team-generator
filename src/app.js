@@ -491,6 +491,19 @@ function addAbandonButton(container) {
 }
 
 
+// Team columns sit side by side, so they should read as a matched pair even
+// when the teams end up different sizes — 13 people across 2 teams is a 7 and
+// a 6, and the 6 renders one row shorter. Padding the short team to 7 slots
+// would claim a place it never gets, so the slot counts stay honest and the
+// boxes are levelled to the tallest instead.
+function equaliseTeamHeights(root) {
+  const columns = [...root.querySelectorAll('.team-column')];
+  if (columns.length < 2) return;
+  for (const column of columns) column.style.minHeight = '';
+  const tallest = Math.max(...columns.map((c) => c.getBoundingClientRect().height));
+  for (const column of columns) column.style.minHeight = `${Math.ceil(tallest)}px`;
+}
+
 function renderRun() {
   const teamName = teamLabel(currentTeamIndex(state.run));
   el('turn-heading').textContent = state.run.mode === 'captains'
@@ -532,6 +545,8 @@ function renderRun() {
     activeIndex: teamIndex === null ? null : teamIndex - split,
     slots: finalSizes.slice(split),
   }));
+
+  equaliseTeamHeights(el('run-view'));
 
   wheel.resize();
   wheel.draw();
@@ -597,6 +612,8 @@ function renderDraft() {
   draftControls.replaceChildren();
   addUndoButton(draftControls);
   addAbandonButton(draftControls);
+
+  equaliseTeamHeights(el('draft-view'));
 }
 
 function renderResults() {
@@ -640,6 +657,7 @@ function renderResults() {
   actions.append(again);
 
   view.append(heading, summary, teamColumns(state.run.teams, { roster: state.roster }), actions);
+  equaliseTeamHeights(view);
 }
 
 export function render() {
