@@ -54,3 +54,20 @@ test('a throwing backend does not crash load or save', () => {
   assert.deepEqual(store.load(), DEFAULT_STATE);
   assert.equal(store.save(DEFAULT_STATE), false);
 });
+
+test('a browser that has never saved is seeded with the regulars, all present', () => {
+  const store = createStorage(fakeBackend({}));
+  const loaded = store.load();
+  assert.equal(loaded.roster.length, 14);
+  assert.equal(loaded.roster[0].name, 'Andrew');
+  assert.equal(loaded.roster.at(-1).name, 'Wyatt');
+  const names = loaded.roster.map((p) => p.name);
+  assert.deepEqual(names, [...names].sort(), 'the seeded roster is alphabetical');
+  assert.deepEqual(loaded.present, loaded.roster.map((p) => p.id));
+  assert.equal(new Set(loaded.roster.map((p) => p.id)).size, 14, 'ids are unique');
+});
+
+test('an empty roster someone cleared on purpose is not re-seeded', () => {
+  const store = createStorage(fakeBackend({ [STORAGE_KEY]: '{"roster":[],"present":[]}' }));
+  assert.deepEqual(store.load().roster, []);
+});

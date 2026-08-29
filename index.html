@@ -14,9 +14,17 @@
         Saving is turned off in this browser, so your roster will not survive a refresh.
       </p>
 
+      <div class="setup-columns">
       <div class="roster-panel">
-        <h2>Who is in the call?</h2>
+        <div class="panel-head">
+          <h2>Who is in the call?</h2>
+          <div class="presence">
+            <span id="present-count" class="present-count"></span>
+            <button id="select-all-btn" type="button" class="link-btn"></button>
+          </div>
+        </div>
         <ul id="roster-list" class="roster-list"></ul>
+        <p id="removal-notice" class="removal-notice" hidden></p>
         <form id="add-form" class="add-form">
           <input id="name-input" type="text" placeholder="Add a name" autocomplete="off">
           <button id="add-btn" type="submit">Add</button>
@@ -61,11 +69,13 @@
           </fieldset>
         </div>
 
+        <p id="split-preview" class="split-preview"></p>
         <p id="setup-error" class="error" hidden></p>
         <div class="start-buttons">
           <button id="start-wheel-btn" type="button">Spin the wheel</button>
           <button id="start-draft-btn" type="button" hidden>Start the draft</button>
         </div>
+      </div>
       </div>
     </section>
 
@@ -78,7 +88,6 @@
         </div>
         <div id="run-teams-right" class="team-side"></div>
       </div>
-      <p id="winner-banner" class="winner-banner"></p>
       <div id="run-controls" class="start-buttons"></div>
     </section>
 
@@ -94,9 +103,13 @@
     </div>
     <section id="draft-view" class="view" hidden>
       <h2 id="draft-heading" class="turn-heading"></h2>
-      <div id="draft-pool" class="draft-pool"></div>
+      <div id="draft-order-strip" class="order-strip"></div>
+      <div class="run-stage">
+        <div id="draft-teams-left" class="team-side"></div>
+        <div id="draft-pool" class="draft-pool"></div>
+        <div id="draft-teams-right" class="team-side"></div>
+      </div>
       <div id="draft-controls" class="start-buttons"></div>
-      <div id="draft-teams"></div>
     </section>
     <section id="results-view" class="view" hidden></section>
   </main>

@@ -92,14 +92,6 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .notice { color: var(--muted); margin: 0 0 20px; }
 
 .turn-heading { font-size: 32px; margin: 0 0 8px; }
-.winner-banner {
-  text-align: center; font-size: 30px; font-weight: 700;
-  color: var(--accent); margin: 0 0 20px; min-height: 40px;
-  /* Always occupies its min-height; visibility (not display) toggles it so
-     the run controls below never jump when a winner is announced. */
-  visibility: hidden;
-}
-.winner-banner.visible { visibility: visible; }
 .wheel-wrap { display: flex; justify-content: center; margin: 12px 0 24px; }
 #wheel-canvas { width: min(600px, 80vw); height: auto; aspect-ratio: 1; }
 .team-columns { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 28px; }
@@ -199,7 +191,6 @@ button.secondary { background: var(--line); color: var(--text); }
 #run-view .team-column h3 { font-size: 19px; margin: 0 0 6px; }
 #run-view .team-column li { font-size: 18px; line-height: 1.35; padding: 2px 0; }
 
-#run-view .winner-banner { flex: none; margin: 10px 0 0; }
 /* Pushed to the bottom of the window, centred under the wheel rather than
    stranded in the corner. */
 #run-view #run-controls { flex: none; margin-top: auto; justify-content: center; }
@@ -248,3 +239,120 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 #draft-config[hidden] { display: none; }
 #draft-config .draft-options { flex: 1 1 260px; margin: 18px 0 0; }
 #draft-config .roster-list { margin: 12px 0 0; }
+
+/* Setup in two columns: the roster on the left, everything about how to pick
+   on the right. With one column an eight-person roster pushed the start
+   button 1650px down a 900px window — you scrolled past your whole group to
+   start, every session. */
+.setup-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.setup-columns > * { margin-bottom: 0; }
+
+.panel-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 10px;
+}
+.panel-head h2 { margin: 0; }
+.presence { display: flex; align-items: baseline; gap: 12px; }
+.present-count { color: var(--muted); font-size: 15px; white-space: nowrap; }
+.link-btn {
+  background: none; border: none; padding: 0;
+  color: var(--accent); font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.link-btn:hover { text-decoration: underline; }
+
+/* The roster is the part that grows without bound, so it is the part that
+   scrolls — the page itself stays put. */
+.roster-panel .roster-list {
+  max-height: min(52vh, 560px);
+  overflow-y: auto;
+  margin-bottom: 14px;
+}
+
+.split-preview { color: var(--muted); margin: 16px 0 0; font-size: 16px; }
+
+/* Below roughly a laptop width the columns stop helping and stack. */
+@media (max-width: 900px) {
+  .setup-columns { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Draft board, shaped like the wheel screen: teams either side, the pool you
+   act on in the middle, controls at the bottom. */
+#draft-view:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 96px);
+  min-height: 0;
+}
+#draft-view .turn-heading { flex: none; margin-bottom: 8px; }
+#draft-view .run-stage { gap: 28px; align-items: stretch; }
+/* The sides get a definite width and the pool takes what is left. Left to
+   flex on its own the pool grew to fit its widest row and squeezed the team
+   columns down to a sliver — the wheel screen only works because the wheel
+   has a fixed width. */
+#draft-view .team-side {
+  flex: 0 0 clamp(200px, 20%, 300px);
+  display: flex; align-items: center;
+}
+#draft-view .draft-pool {
+  flex: 1 1 auto; min-width: 0;
+  justify-content: center; align-content: center;
+  margin: 0; max-height: 100%; overflow-y: auto;
+}
+#draft-view #draft-controls { flex: none; margin-top: auto; justify-content: center; }
+#draft-view .team-columns { margin: 0; }
+
+/* The team on the clock. Everything about the board should answer "whose
+   turn is it?" without reading the heading. */
+.team-column.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+.team-column.is-active h3::after {
+  content: ' · picking';
+  font-size: 14px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--muted);
+}
+.slot-empty { color: var(--line); }
+
+/* Pick order strip: past picks fade back, the current one is marked. */
+.order-strip { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.order-step {
+  min-width: 30px; padding: 3px 8px; text-align: center;
+  border: 1px solid var(--line); border-radius: 7px;
+  font-size: 14px; font-weight: 700; color: var(--muted);
+}
+.order-step.is-done { opacity: 0.4; }
+.order-step.is-now {
+  border-color: var(--accent); color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+main:has(#draft-view:not([hidden])) { max-width: 1600px; }
+
+/* Results: the payoff, so it gets the weight of a finished thing rather than
+   the same small heading as a form section. */
+#results-view:not([hidden]) {
+  display: flex; flex-direction: column;
+  min-height: calc(100dvh - 96px);
+}
+.results-heading { font-size: 40px; margin: 0 0 4px; }
+.results-summary { color: var(--muted); margin: 0 0 24px; font-size: 18px; }
+#results-view .team-columns { margin-top: 0; }
+#results-view .team-column { padding: 20px 22px; }
+#results-view .team-column h3 { font-size: 26px; }
+#results-view .start-buttons { margin-top: auto; padding-top: 28px; }
+main:has(#results-view:not([hidden])) { max-width: 1400px; }
+
+/* Focus lands on a view's heading when the view changes; it should be a
+   waypoint for keyboard users, not a visible box around a title. */
+[tabindex="-1"]:focus { outline: none; }
+
+.removal-notice {
+  display: flex; align-items: baseline; gap: 10px;
+  margin: 0 0 14px; color: var(--muted); font-size: 15px;
+}

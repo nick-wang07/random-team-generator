@@ -1,14 +1,29 @@
 export const STORAGE_KEY = 'rtg.v1';
 
-export const DEFAULT_STATE = Object.freeze({
-  roster: [],
-  present: [],
-  config: { teamCount: 2, draftOrder: 'snake' },
-});
+// The regulars, so the app is usable the moment it opens instead of starting
+// on an empty list. Ids are slugs rather than random, so they stay stable and
+// readable in storage. This only seeds a browser that has never saved: once
+// there is a saved roster it wins, including an empty one someone cleared on
+// purpose.
+const DEFAULT_NAMES = [
+  'Andrew', 'Brandon', 'Brennan', 'Chase', 'Chin', 'Colton', 'Craig',
+  'Isaiah', 'Jordan', 'Major', 'Nick', 'Nikhil', 'Walter', 'Wyatt',
+];
+
+function defaultRoster() {
+  return DEFAULT_NAMES.map((name) => ({ id: name.toLowerCase(), name }));
+}
 
 function defaults() {
-  return { roster: [], present: [], config: { teamCount: 2, draftOrder: 'snake' } };
+  const roster = defaultRoster();
+  return {
+    roster,
+    present: roster.map((person) => person.id),
+    config: { teamCount: 2, draftOrder: 'snake' },
+  };
 }
+
+export const DEFAULT_STATE = Object.freeze(defaults());
 
 // Returns localStorage when it is usable, or null in a private window where
 // touching it throws. Callers use the null to show a "nothing will be saved" notice.

@@ -1,10 +1,12 @@
 import { browserBackend, createStorage } from './storage.js';
 import { addPerson, removePerson, renamePerson, prunePresent, findPerson } from './roster.js';
-import { validateSetup, pickRotation, teamLabel } from './teams.js';
+import { validateSetup, pickRotation, teamLabel, teamSizes } from './teams.js';
 import { randomIndex, planSpin } from './rng.js';
 import { startRun, applyPick, undoPick, currentTeamIndex, isComplete, picksRemaining } from './run.js';
-import { formatTeams, teamHasWalt, commiserate } from './format.js';
+import { formatTeams } from './format.js';
+import { teamColumns } from './team-view.js';
 import { createWheel } from './wheel.js';
+import { createReveal } from './reveal.js';
 import { draftSequence } from './draft.js';
 
 const store = createStorage(browserBackend());
@@ -32,6 +34,14 @@ window.addEventListener('resize', () => { wheel.resize(); wheel.draw(); });
 // Click the wheel to cut a spin short. It lands on the same angle either way,
 // so this only skips the wait — it cannot change who won.
 el('wheel-canvas').addEventListener('click', () => wheel.finish());
+
+const reveal = createReveal({
+  overlay: el('reveal-overlay'),
+  nameNode: el('reveal-name'),
+  teamNode: el('reveal-team'),
+  closeButton: el('reveal-close'),
+});
+const isRevealing = () => reveal.isRevealing();
 
 function persist() {
   store.save({ roster: state.roster, present: state.present, config: state.config });
@@ -68,6 +78,9 @@ let editingError = null;
 // selects the whole name (for fast overtyping) without re-selecting-all — and
 // eating the next keystroke — on every incidental re-render while mid-typing.
 let editingJustOpened = false;
+// The last person removed from the roster, kept only so it can be undone.
+// { person, index, wasPresent } | null
+let removedPerson = null;
 
 function nameButton(person) {
   const button = document.createElement('button');
@@ -153,12 +166,17 @@ function rosterRow(person) {
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.textContent = 'remove';
+  remove.title = `Remove ${person.name} from the roster`;
   remove.addEventListener('click', () => {
     if (editingId === person.id) {
       editingId = null;
       editingDraft = null;
       editingError = null;
     }
+    // The roster is the one thing here that outlives the session, so a
+    // misclick on remove is the only genuinely destructive act in the app.
+    // Keep enough to put them back exactly where they were.
+    removedPerson = { person, index: state.roster.findIndex((p) => p.id === person.id), wasPresent: state.present.includes(person.id) };
     state.roster = removePerson(state.roster, person.id);
     state.present = prunePresent(state.roster, state.present);
     persist();
@@ -255,12 +273,68 @@ function renderCaptainList() {
   }
 }
 
+function renderRemovalNotice() {
+  const box = el('removal-notice');
+  if (!removedPerson) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  const text = document.createElement('span');
+  text.textContent = `Removed ${removedPerson.person.name}.`;
+  const undo = document.createElement('button');
+  undo.type = 'button';
+  undo.className = 'link-btn';
+  undo.textContent = 'Undo';
+  undo.addEventListener('click', () => {
+    const { person, index, wasPresent } = removedPerson;
+    const roster = [...state.roster];
+    roster.splice(Math.min(index, roster.length), 0, person);
+    state.roster = roster;
+    if (wasPresent) state.present = [...new Set([...state.present, person.id])];
+    removedPerson = null;
+    persist();
+    render();
+  });
+  box.replaceChildren(text, undo);
+  box.hidden = false;
+}
+
+function renderPresence() {
+  const present = state.present.length;
+  const total = state.roster.length;
+  el('present-count').textContent = total === 0
+    ? ''
+    : `${present} of ${total} in the call`;
+
+  // One button that does whichever is useful: tick everyone, or clear them.
+  const toggle = el('select-all-btn');
+  const allPresent = total > 0 && present === total;
+  toggle.hidden = total === 0;
+  toggle.textContent = allPresent ? 'Clear all' : 'Select all';
+  toggle.dataset.action = allPresent ? 'clear' : 'select';
+}
+
+// "2 teams of 4", or "3 teams: 4, 3, 3" when it does not divide evenly, so
+// the host can sanity-check the team count before committing to it.
+function splitPreview() {
+  const present = state.present.length;
+  const teamCount = state.config.teamCount;
+  if (!validateSetup({ presentCount: present, teamCount }).ok) return '';
+  const sizes = teamSizes(present, teamCount);
+  return sizes.every((n) => n === sizes[0])
+    ? `${teamCount} teams of ${sizes[0]}`
+    : `${teamCount} teams: ${sizes.join(', ')}`;
+}
+
 function renderSetup() {
   // Drop any captain who is no longer present (unchecked from the roster).
   state.captains = state.captains.filter((id) => state.present.includes(id));
 
   renderRoster();
   renderCaptainList();
+  renderPresence();
+  renderRemovalNotice();
   el('team-count').value = String(state.config.teamCount);
   const check = validateSetup({
     presentCount: state.present.length,
@@ -277,6 +351,8 @@ function renderSetup() {
   el('draft-config').hidden = !drafting;
   el('start-wheel-btn').hidden = drafting;
   el('start-draft-btn').hidden = !drafting;
+
+  el('split-preview').textContent = splitPreview();
 
   el('start-wheel-btn').disabled = !check.ok;
   const draftCheck = validateDraftSetup();
@@ -309,7 +385,6 @@ function startWheelRun() {
   editingId = null;
   editingDraft = null;
   editingError = null;
-  hideBanner();
   render();
 }
 
@@ -323,7 +398,6 @@ function beginDraftFromCaptains(captainIds) {
     order: draftSequence(teamCount, present.length - teamCount, state.config.draftOrder),
     seeded: captainIds.map((id) => [id]),
   });
-  hideBanner();
   render();
 }
 
@@ -354,69 +428,7 @@ function setControlsEnabled(enabled) {
   }
 }
 
-// The banner uses visibility (not the `hidden` attribute/display:none) so its
-// reserved min-height stays in the layout at all times — toggling display
-// would yank the run controls below it up and down by ~50px on every spin.
-function hideBanner() {
-  const banner = el('winner-banner');
-  banner.classList.remove('visible');
-  // Clear the text too, not just hide visually — otherwise a stale winner
-  // name sits in the DOM, readable via inspection/selection, while merely
-  // invisible on screen.
-  banner.textContent = '';
-}
 
-function announce(message) {
-  const banner = el('winner-banner');
-  banner.textContent = message;
-  banner.classList.add('visible');
-}
-
-const REVEAL_MS = 2500;
-// Set while the reveal card is up, so the spacebar closes the card instead of
-// falling through and starting the next spin on the same keypress.
-let closeReveal = null;
-
-export function isRevealing() {
-  return closeReveal !== null;
-}
-
-// Shows the card and resolves once it is dismissed — by the timer, the X, a
-// click on the backdrop, or Escape/Space. Always resolves, never rejects, so
-// callers can await it without a pick going missing.
-function showReveal(name, teamName) {
-  const overlay = el('reveal-overlay');
-  el('reveal-name').textContent = name;
-  el('reveal-team').textContent = `joins ${teamName}`;
-  overlay.hidden = false;
-
-  return new Promise((resolve) => {
-    // Per-call, so idempotency never depends on the shared `closeReveal`
-    // still pointing at this particular dismiss.
-    let done = false;
-    const timer = setTimeout(dismiss, REVEAL_MS);
-
-    function dismiss() {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      closeReveal = null;
-      overlay.hidden = true;
-      overlay.removeEventListener('click', onBackdrop);
-      el('reveal-close').removeEventListener('click', dismiss);
-      resolve();
-    }
-
-    function onBackdrop(event) {
-      // Only the backdrop itself — a click inside the card must not close it.
-      if (event.target === overlay) dismiss();
-    }
-
-    closeReveal = dismiss;
-    overlay.addEventListener('click', onBackdrop);
-    el('reveal-close').addEventListener('click', dismiss);
-  });
-}
 
 async function spinOnce() {
   if (wheel.isSpinning() || isRevealing()) return;
@@ -428,7 +440,6 @@ async function spinOnce() {
   // and spinning it just costs everyone four seconds. Straight to the card.
   const lastOne = state.run.pool.length === 1;
 
-  hideBanner();
   setControlsEnabled(false);
   try {
     if (!lastOne) {
@@ -437,7 +448,7 @@ async function spinOnce() {
     // Held open before the pick is applied: render() redraws the wheel without
     // the winner, so applying first would erase the slice everyone is looking
     // at. The wheel stays stopped on them for as long as the card is up.
-    await showReveal(nameOf(winnerId), teamName);
+    await reveal.show(nameOf(winnerId), teamName);
   } finally {
     // Restored on every path, including a rejected/aborted spin, so a
     // failure never leaves the controls stuck disabled with the winner
@@ -447,16 +458,12 @@ async function spinOnce() {
 
   state.run = applyPick(state.run, winnerId);
   render();
-  // Announced after the re-render, or the fresh render would wipe the banner
-  // before anyone on the stream could read it.
-  announce(`${nameOf(winnerId)} joins ${teamName}`);
 }
 
 function undoLast() {
   if (wheel.isSpinning() || isRevealing()) return;
   if (!state.run || state.run.history.length === 0) return;
   state.run = undoPick(state.run);
-  hideBanner();
   render();
 }
 
@@ -483,29 +490,6 @@ function addAbandonButton(container) {
   container.append(back);
 }
 
-function teamColumns(teams) {
-  const wrap = document.createElement('div');
-  wrap.className = 'team-columns';
-  for (const team of teams) {
-    const col = document.createElement('div');
-    col.className = 'team-column';
-
-    const heading = document.createElement('h3');
-    heading.textContent = `${team.name} (${team.members.length})`;
-
-    const hasWalt = teamHasWalt(team.members, state.roster);
-    const list = document.createElement('ul');
-    list.append(...team.members.map((id) => {
-      const li = document.createElement('li');
-      li.textContent = commiserate(nameOf(id), hasWalt);
-      return li;
-    }));
-
-    col.append(heading, list);
-    wrap.append(col);
-  }
-  return wrap;
-}
 
 function renderRun() {
   const teamName = teamLabel(currentTeamIndex(state.run));
@@ -530,11 +514,27 @@ function renderRun() {
   // Teams flank the wheel: the first half of them down the left, the rest
   // down the right. With the usual two teams that is simply A and B.
   const split = Math.ceil(state.run.teams.length / 2);
-  el('run-teams-left').replaceChildren(teamColumns(state.run.teams.slice(0, split)));
-  el('run-teams-right').replaceChildren(teamColumns(state.run.teams.slice(split)));
+  el('run-teams-left').replaceChildren(teamColumns(state.run.teams.slice(0, split), { roster: state.roster }));
+  el('run-teams-right').replaceChildren(teamColumns(state.run.teams.slice(split), { roster: state.roster }));
 
   wheel.resize();
   wheel.draw();
+}
+
+// The pick order laid out as a strip, with the current pick marked. Snake
+// order means a team sometimes picks twice in a row, which looks like a bug
+// unless you can see the shape of the whole thing.
+function renderPickOrder() {
+  const strip = el('draft-order-strip');
+  strip.replaceChildren();
+  state.run.order.forEach((teamIndex, i) => {
+    const step = document.createElement('span');
+    step.className = 'order-step';
+    if (i < state.run.turnIndex) step.classList.add('is-done');
+    if (i === state.run.turnIndex) step.classList.add('is-now');
+    step.textContent = teamLabel(teamIndex).replace('Team ', '');
+    strip.append(step);
+  });
 }
 
 function renderDraft() {
@@ -543,6 +543,7 @@ function renderDraft() {
   const pickNumber = state.run.turnIndex + 1;
   el('draft-heading').textContent =
     `${teamLabel(teamIndex)} picks — pick ${pickNumber} of ${totalPicks}`;
+  renderPickOrder();
 
   const pool = el('draft-pool');
   pool.replaceChildren();
@@ -557,7 +558,25 @@ function renderDraft() {
     pool.append(button);
   }
 
-  el('draft-teams').replaceChildren(teamColumns(state.run.teams));
+  // Same shape as the wheel screen: teams either side, the thing you act on
+  // in the middle. Sizes are what each team will finish with, so the columns
+  // show the shape of the finished teams from the first pick.
+  const finalSizes = teamSizes(
+    state.run.teams.reduce((n, team) => n + team.members.length, 0) + state.run.pool.length,
+    state.run.teams.length,
+  );
+  const split = Math.ceil(state.run.teams.length / 2);
+  el('draft-teams-left').replaceChildren(
+    teamColumns(state.run.teams.slice(0, split), { roster: state.roster, activeIndex: teamIndex, slots: finalSizes.slice(0, split) }),
+  );
+  el('draft-teams-right').replaceChildren(
+    teamColumns(state.run.teams.slice(split), {
+      roster: state.roster,
+      activeIndex: teamIndex === null ? null : teamIndex - split,
+      slots: finalSizes.slice(split),
+    }),
+  );
+
   const draftControls = el('draft-controls');
   draftControls.replaceChildren();
   addUndoButton(draftControls);
@@ -569,7 +588,15 @@ function renderResults() {
   view.replaceChildren();
 
   const heading = document.createElement('h2');
+  heading.className = 'results-heading';
   heading.textContent = 'Teams';
+
+  const summary = document.createElement('p');
+  summary.className = 'results-summary';
+  const sizes = state.run.teams.map((team) => team.members.length);
+  summary.textContent = sizes.every((n) => n === sizes[0])
+    ? `${state.run.teams.length} teams of ${sizes[0]}`
+    : `${state.run.teams.length} teams: ${sizes.join(', ')}`;
 
   const copy = document.createElement('button');
   copy.type = 'button';
@@ -596,7 +623,7 @@ function renderResults() {
   addUndoButton(actions);
   actions.append(again);
 
-  view.append(heading, teamColumns(state.run.teams), actions);
+  view.append(heading, summary, teamColumns(state.run.teams, { roster: state.roster }), actions);
 }
 
 export function render() {
@@ -620,9 +647,39 @@ export function render() {
   else if (finished) renderResults();
   else if (drafting) renderDraft();
   else renderRun();
+
+  moveFocusOnViewChange(finished ? 'results' : drafting ? 'draft' : running ? 'run' : 'setup');
+}
+
+// Switching views used to leave focus on a button that had just been hidden,
+// which drops a keyboard user back to the top of the document with no idea
+// where they are. Move it to the new view's heading instead, and only when
+// the view actually changed so it never steals focus mid-typing.
+let shownView = null;
+function moveFocusOnViewChange(view) {
+  if (view === shownView) return;
+  shownView = view;
+  const target = {
+    setup: 'setup-view',
+    run: 'turn-heading',
+    draft: 'draft-heading',
+    results: 'results-view',
+  }[view];
+  const node = el(target);
+  if (!node) return;
+  node.setAttribute('tabindex', '-1');
+  node.focus({ preventScroll: true });
 }
 
 el('storage-notice').hidden = store.available;
+
+el('select-all-btn').addEventListener('click', () => {
+  state.present = el('select-all-btn').dataset.action === 'clear'
+    ? []
+    : state.roster.map((person) => person.id);
+  persist();
+  render();
+});
 
 el('add-form').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -694,7 +751,7 @@ document.addEventListener('keydown', (event) => {
   if (isRevealing()) {
     if (event.code !== 'Space' && event.key !== 'Escape') return;
     event.preventDefault();
-    closeReveal();
+    reveal.close();
     return;
   }
   if (event.code !== 'Space') return;
