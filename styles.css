@@ -318,7 +318,10 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
   font-size: 14px; font-weight: 600; letter-spacing: 0.04em;
   text-transform: uppercase; color: var(--muted);
 }
-.slot-empty { color: var(--line); }
+/* Quiet, but relative to the muted text colour rather than the border
+   colour: --line sat almost exactly on the active column's tinted
+   background, so the highlighted team's slots rendered invisible. */
+.slot-empty { color: color-mix(in srgb, var(--muted) 42%, transparent); }
 
 /* Pick order strip: past picks fade back, the current one is marked. */
 .order-strip { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
