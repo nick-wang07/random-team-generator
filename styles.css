@@ -263,6 +263,12 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
   gap: 12px; margin-bottom: 10px;
 }
 .panel-head h2 { margin: 0; }
+
+/* Reset lives at the far bottom corner, deliberately out of the way: it is
+   the only button here that throws away the whole list. */
+.panel-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+.panel-foot .link-btn { color: var(--muted); font-weight: 500; }
+.panel-foot .link-btn:hover { color: var(--danger); }
 .presence { display: flex; align-items: baseline; gap: 12px; }
 .present-count { color: var(--muted); font-size: 15px; white-space: nowrap; }
 .link-btn {
@@ -447,6 +453,7 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
    on the shared baseline rather than floating up under its own content. */
 #setup-view .roster-panel .add-form,
 #setup-view .config-panel .split-preview { margin-top: auto; }
+#setup-view .roster-panel .panel-foot { flex: none; }
 
 /* The config panel scrolls its options, but the preview, any error and the
    start button stay pinned at the bottom — scrolling to find "Start" is the

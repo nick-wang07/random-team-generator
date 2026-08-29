@@ -25,6 +25,14 @@ function defaults() {
 
 export const DEFAULT_STATE = Object.freeze(defaults());
 
+// A fresh copy of the seed roster, for the "Reset to default list" button.
+// Built anew on every call rather than handing out DEFAULT_STATE's arrays,
+// which callers would then be free to mutate out from under everyone else.
+export function defaultRosterState() {
+  const { roster, present } = defaults();
+  return { roster, present };
+}
+
 // Returns localStorage when it is usable, or null in a private window where
 // touching it throws. Callers use the null to show a "nothing will be saved" notice.
 export function browserBackend() {

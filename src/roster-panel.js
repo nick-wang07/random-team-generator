@@ -1,5 +1,6 @@
 import { el } from './dom.js';
 import { addPerson, removePerson, renamePerson, prunePresent } from './roster.js';
+import { defaultRosterState } from './storage.js';
 
 // The left-hand panel on the setup screen: who is on the roster, who is in the
 // call, renaming, removing, adding. It owns the whole inline name editor —
@@ -28,9 +29,19 @@ export function createRosterPanel({ state, persist, render, showError }) {
   // selects the whole name (for fast overtyping) without re-selecting-all — and
   // eating the next keystroke — on every incidental re-render while mid-typing.
   let editingJustOpened = false;
-  // The last person removed from the roster, kept only so it can be undone.
-  // { person, index, wasPresent } | null
-  let removedPerson = null;
+  // The last destructive act, kept only so it can be undone: the message to
+  // show, and the roster and presence it replaced. A snapshot rather than a
+  // description of the change, so taking one person off the list and
+  // replacing the whole list both undo through the same path.
+  // { message, roster, present } | null
+  let lastUndo = null;
+
+  // Call BEFORE the change, while state still holds what is about to be lost.
+  // Safe to keep the references: every roster and presence update replaces the
+  // array rather than editing it, so the snapshot cannot be written through.
+  function rememberUndo(message) {
+    lastUndo = { message, roster: state.roster, present: state.present };
+  }
 
   function forgetEditor() {
     editingId = null;
@@ -137,10 +148,9 @@ export function createRosterPanel({ state, persist, render, showError }) {
     remove.title = `Remove ${person.name} from the roster`;
     remove.addEventListener('click', () => {
       if (editingId === person.id) forgetEditor();
-      // The roster is the one thing here that outlives the session, so a
-      // misclick on remove is the only genuinely destructive act in the app.
-      // Keep enough to put them back exactly where they were.
-      removedPerson = { person, index: state.roster.findIndex((p) => p.id === person.id), wasPresent: state.present.includes(person.id) };
+      // The roster is the one thing here that outlives the session, so taking
+      // someone off it is a genuinely destructive act — hence the undo.
+      rememberUndo(`Removed ${person.name}.`);
       state.roster = removePerson(state.roster, person.id);
       state.present = prunePresent(state.roster, state.present);
       persist();
@@ -196,26 +206,23 @@ export function createRosterPanel({ state, persist, render, showError }) {
     editingJustOpened = false;
   }
 
-  function renderRemovalNotice() {
+  function renderUndoNotice() {
     const box = el('removal-notice');
-    if (!removedPerson) {
+    if (!lastUndo) {
       box.hidden = true;
       box.replaceChildren();
       return;
     }
     const text = document.createElement('span');
-    text.textContent = `Removed ${removedPerson.person.name}.`;
+    text.textContent = lastUndo.message;
     const undo = document.createElement('button');
     undo.type = 'button';
     undo.className = 'link-btn';
     undo.textContent = 'Undo';
     undo.addEventListener('click', () => {
-      const { person, index, wasPresent } = removedPerson;
-      const roster = [...state.roster];
-      roster.splice(Math.min(index, roster.length), 0, person);
-      state.roster = roster;
-      if (wasPresent) state.present = [...new Set([...state.present, person.id])];
-      removedPerson = null;
+      state.roster = lastUndo.roster;
+      state.present = lastUndo.present;
+      lastUndo = null;
       persist();
       render();
     });
@@ -246,6 +253,20 @@ export function createRosterPanel({ state, persist, render, showError }) {
     render();
   });
 
+  // The roster outlives the session by design, so it can drift a long way from
+  // the regulars. This puts it back without making anyone clear it by hand —
+  // and it is itself undoable, since it throws away more than any other button
+  // here.
+  el('reset-roster-btn').addEventListener('click', () => {
+    forgetEditor();
+    rememberUndo('Reset to the default list.');
+    const { roster, present } = defaultRosterState();
+    state.roster = roster;
+    state.present = present;
+    persist();
+    render();
+  });
+
   el('add-form').addEventListener('submit', (event) => {
     event.preventDefault();
     const input = el('name-input');
@@ -268,7 +289,7 @@ export function createRosterPanel({ state, persist, render, showError }) {
     render() {
       renderRoster();
       renderPresence();
-      renderRemovalNotice();
+      renderUndoNotice();
     },
     openEditorError,
     // Starting a run abandons whatever row was mid-edit. Called from there so

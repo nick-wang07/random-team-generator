@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStorage, DEFAULT_STATE, STORAGE_KEY } from '../src/storage.js';
+import { createStorage, DEFAULT_STATE, STORAGE_KEY, defaultRosterState } from '../src/storage.js';
 
 function fakeBackend(initial = {}) {
   const map = new Map(Object.entries(initial));
@@ -70,4 +70,22 @@ test('a browser that has never saved is seeded with the regulars, all present', 
 test('an empty roster someone cleared on purpose is not re-seeded', () => {
   const store = createStorage(fakeBackend({ [STORAGE_KEY]: '{"roster":[],"present":[]}' }));
   assert.deepEqual(store.load().roster, []);
+});
+
+test('defaultRosterState is the seed roster with everyone present', () => {
+  const { roster, present } = defaultRosterState();
+  assert.equal(roster.length, 14);
+  assert.deepEqual(roster.map((p) => p.name), DEFAULT_STATE.roster.map((p) => p.name));
+  assert.deepEqual(present, roster.map((p) => p.id));
+});
+
+test('defaultRosterState hands out a fresh copy every time', () => {
+  const first = defaultRosterState();
+  first.roster.push({ id: 'x', name: 'Intruder' });
+  first.present.push('x');
+  const second = defaultRosterState();
+  assert.equal(second.roster.length, 14);
+  assert.equal(second.present.length, 14);
+  // and the frozen DEFAULT_STATE was never the thing being handed out
+  assert.equal(DEFAULT_STATE.roster.length, 14);
 });

@@ -20,6 +20,8 @@ the same people are already selected next time.
 - Click a name to rename it; Enter commits, Escape cancels.
 - **Remove** takes someone off the roster permanently — the roster is the only
   thing here that outlives the session, so an **Undo** appears next to the list.
+- **Reset to default list** puts the roster back to the regulars when it has
+  drifted, with everyone ticked. It is undoable too.
 - **Select all / Clear all** flips the whole roster at once.
 - A preview under the team count shows the split you are about to get
   ("2 teams of 7").
