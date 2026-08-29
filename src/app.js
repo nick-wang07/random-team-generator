@@ -512,10 +512,26 @@ function renderRun() {
   addAbandonButton(controls);
 
   // Teams flank the wheel: the first half of them down the left, the rest
-  // down the right. With the usual two teams that is simply A and B.
+  // down the right. With the usual two teams that is simply A and B. Same
+  // treatment as the draft board — the team about to receive this spin is
+  // outlined, and unfilled places show as slots — so the two screens render
+  // the same data the same way.
+  const teamIndex = currentTeamIndex(state.run);
   const split = Math.ceil(state.run.teams.length / 2);
-  el('run-teams-left').replaceChildren(teamColumns(state.run.teams.slice(0, split), { roster: state.roster }));
-  el('run-teams-right').replaceChildren(teamColumns(state.run.teams.slice(split), { roster: state.roster }));
+  const finalSizes = teamSizes(
+    state.run.teams.reduce((n, team) => n + team.members.length, 0) + state.run.pool.length,
+    state.run.teams.length,
+  );
+  el('run-teams-left').replaceChildren(teamColumns(state.run.teams.slice(0, split), {
+    roster: state.roster,
+    activeIndex: teamIndex,
+    slots: finalSizes.slice(0, split),
+  }));
+  el('run-teams-right').replaceChildren(teamColumns(state.run.teams.slice(split), {
+    roster: state.roster,
+    activeIndex: teamIndex === null ? null : teamIndex - split,
+    slots: finalSizes.slice(split),
+  }));
 
   wheel.resize();
   wheel.draw();

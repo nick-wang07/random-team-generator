@@ -194,6 +194,7 @@ button.secondary { background: var(--line); color: var(--text); }
 /* Pushed to the bottom of the window, centred under the wheel rather than
    stranded in the corner. */
 #run-view #run-controls { flex: none; margin-top: auto; justify-content: center; }
+#run-view .shortcut-hint { flex: none; }
 
 /* The run screen wants the extra width for its flanking team lists; every
    other view keeps the narrower reading measure. Browsers without :has()
@@ -356,3 +357,50 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
   display: flex; align-items: baseline; gap: 10px;
   margin: 0 0 14px; color: var(--muted); font-size: 15px;
 }
+
+/* The captain list is the roster again, so it grows the same way and needs
+   the same cap — without it, choosing captains pushed setup back over the
+   fold (1648px in an 888px window with fourteen people), which is the exact
+   problem the two-column layout exists to solve. */
+#captain-list {
+  max-height: min(34vh, 330px);
+  overflow-y: auto;
+  margin: 12px 0 0;
+}
+
+/* On the wheel screen the highlighted team is not choosing anyone — it is
+   the team this spin will fill — so it gets its own wording. */
+#run-view .team-column.is-active h3::after { content: ' · up next'; }
+
+/* Quiet hint for the two things that are not visible affordances. */
+.shortcut-hint {
+  flex: none; margin: 10px 0 0; text-align: center;
+  color: var(--muted); font-size: 14px;
+}
+
+/* Bound the whole setup area to the window and let each panel scroll inside
+   itself. Capping individual lists only fixed the modes I remembered to
+   test — choosing captains still pushed the page over. This holds for every
+   combination of roster size and mode, including ones added later. */
+#setup-view:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 96px);
+  min-height: 0;
+}
+#setup-view h1 { flex: none; }
+#setup-view .setup-columns { flex: 1 1 auto; min-height: 0; }
+#setup-view .roster-panel,
+#setup-view .config-panel {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+/* The config panel scrolls its options, but the preview, any error and the
+   start button stay pinned at the bottom — scrolling to find "Start" is the
+   thing this layout exists to prevent. */
+#setup-view .config-panel { display: flex; flex-direction: column; overflow: hidden; }
+.config-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+#setup-view .config-panel .split-preview,
+#setup-view .config-panel .error,
+#setup-view .config-panel .start-buttons { flex: none; }

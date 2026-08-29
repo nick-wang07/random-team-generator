@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Team Generator</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -32,6 +33,7 @@
       </div>
 
       <div class="config-panel">
+        <div class="config-scroll">
         <h2>How are you picking teams?</h2>
         <div class="mode-choice">
           <label class="mode-card">
@@ -69,6 +71,7 @@
           </fieldset>
         </div>
 
+        </div>
         <p id="split-preview" class="split-preview"></p>
         <p id="setup-error" class="error" hidden></p>
         <div class="start-buttons">
@@ -89,6 +92,7 @@
         <div id="run-teams-right" class="team-side"></div>
       </div>
       <div id="run-controls" class="start-buttons"></div>
+      <p class="shortcut-hint">Space to spin · click the wheel to skip the spin</p>
     </section>
 
     <!-- Lives outside every view section on purpose: the last captain spin
