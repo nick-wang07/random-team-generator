@@ -27,6 +27,9 @@ const el = (id) => document.getElementById(id);
 
 const wheel = createWheel(el('wheel-canvas'));
 window.addEventListener('resize', () => { wheel.resize(); wheel.draw(); });
+// Click the wheel to cut a spin short. It lands on the same angle either way,
+// so this only skips the wait — it cannot change who won.
+el('wheel-canvas').addEventListener('click', () => wheel.finish());
 
 function persist() {
   store.save({ roster: state.roster, present: state.present, config: state.config });

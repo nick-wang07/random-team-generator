@@ -208,3 +208,6 @@ button.secondary { background: var(--line); color: var(--text); }
    other view keeps the narrower reading measure. Browsers without :has()
    simply get the 1100px column and slightly tighter sides. */
 main:has(#run-view:not([hidden])) { max-width: 1600px; }
+
+/* Only offer the affordance while there is a spin to cut short. */
+#wheel-canvas.is-spinning { cursor: pointer; }

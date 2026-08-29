@@ -113,6 +113,8 @@ export function createWheel(canvas) {
 
   const SPIN_MS = 4000;
   let spinning = false;
+  let frameId = null;
+  let finishActive = null;
 
   // Cubic ease-out: fast off the line, creeping into the final degree.
   function easeOut(t) {
@@ -133,24 +135,50 @@ export function createWheel(canvas) {
     const from = rotation;
     const distance = stopAngleDeg - from;
     spinning = true;
+    canvas.classList.add('is-spinning');
     return new Promise((resolve) => {
       const started = performance.now();
+
+      // Lands the spin on the angle it was always going to stop at. Whether
+      // it gets here by running out of time or by someone cutting it short,
+      // the resting angle is identical — the winner was drawn before any of
+      // this started and nothing here can move it.
+      function settle() {
+        // Normalise so the next spin's 4-to-6 turns start from a small angle.
+        rotation = ((stopAngleDeg % 360) + 360) % 360;
+        draw();
+        spinning = false;
+        frameId = null;
+        finishActive = null;
+        canvas.classList.remove('is-spinning');
+        resolve();
+      }
+
+      // Resolves THIS spin's own promise, never another caller's — that
+      // distinction is what keeps `finish` safe where superseding was not.
+      finishActive = () => {
+        if (frameId !== null) cancelAnimationFrame(frameId);
+        settle();
+      };
+
       function frame(now) {
         const t = Math.min(1, (now - started) / durationMs);
         rotation = from + distance * easeOut(t);
         draw();
         if (t < 1) {
-          requestAnimationFrame(frame);
+          frameId = requestAnimationFrame(frame);
         } else {
-          // Normalise so the next spin's 4-to-6 turns start from a small angle.
-          rotation = ((stopAngleDeg % 360) + 360) % 360;
-          draw();
-          spinning = false;
-          resolve();
+          settle();
         }
       }
-      requestAnimationFrame(frame);
+      frameId = requestAnimationFrame(frame);
     });
+  }
+
+  // Cuts the current spin short. A no-op when nothing is spinning, so callers
+  // can wire it straight to a click without guarding.
+  function finish() {
+    if (finishActive) finishActive();
   }
 
   return {
@@ -160,6 +188,7 @@ export function createWheel(canvas) {
     resize,
     draw,
     spinTo,
+    finish,
     isSpinning: () => spinning,
   };
 }
