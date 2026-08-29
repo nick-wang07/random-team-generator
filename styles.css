@@ -339,17 +339,40 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 main:has(#draft-view:not([hidden])) { max-width: 1600px; }
 
 /* Results: the payoff, so it gets the weight of a finished thing rather than
-   the same small heading as a form section. */
+   the same small heading as a form section.
+
+   Bounded to the window rather than allowed to grow past it, so the buttons
+   are always reachable. The team boxes take only the room they need and the
+   buttons sit straight underneath them; when the teams are long enough to run
+   out of window, the boxes give up the extra height instead and each one
+   scrolls its own list, which leaves the buttons resting on the bottom of the
+   screen. One layout, both cases — there is no height at which the buttons
+   get pushed out of reach. */
 #results-view:not([hidden]) {
   display: flex; flex-direction: column;
-  min-height: calc(100dvh - 96px);
+  height: calc(100dvh - 96px); /* main's 32px top + 64px bottom padding */
+  min-height: 0;
 }
-.results-heading { font-size: 40px; margin: 0 0 4px; }
-.results-summary { color: var(--muted); margin: 0 0 24px; font-size: 18px; }
-#results-view .team-columns { margin-top: 0; }
-#results-view .team-column { padding: 20px 22px; }
-#results-view .team-column h3 { font-size: 26px; }
-#results-view .start-buttons { margin-top: auto; padding-top: 28px; }
+.results-heading { font-size: 40px; margin: 0 0 4px; flex: none; }
+.results-summary { color: var(--muted); margin: 0 0 24px; font-size: 18px; flex: none; }
+/* Shrink but never grow: short teams stay their natural height with the
+   buttons right below them. `overflow-y` only ever engages with enough teams
+   to wrap onto a second row — on one row the columns scroll themselves. */
+#results-view .team-columns {
+  margin-top: 0;
+  flex: 0 1 auto; min-height: 0; overflow-y: auto;
+}
+/* A column is a heading that stays put over a list that scrolls under it.
+   The max-height is what makes that happen: a flex line takes its tallest
+   item's natural height, so without it the columns simply grow past the row
+   and the whole row scrolls instead, taking the team headings with it. */
+#results-view .team-column {
+  padding: 20px 22px;
+  display: flex; flex-direction: column; min-height: 0; max-height: 100%;
+}
+#results-view .team-column h3 { font-size: 26px; flex: none; }
+#results-view .team-column ul { min-height: 0; overflow-y: auto; }
+#results-view .start-buttons { flex: none; justify-content: center; padding-top: 28px; }
 main:has(#results-view:not([hidden])) { max-width: 1400px; }
 
 /* Focus lands on a view's heading when the view changes; it should be a

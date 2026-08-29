@@ -1,7 +1,6 @@
 import { el } from './dom.js';
 import { formatTeams } from './format.js';
 import { teamColumns } from './team-view.js';
-import { equaliseTeamHeights } from './team-board.js';
 
 // The finished teams, plus the button this whole app exists to serve: one
 // click to get the result into a Discord message.
@@ -50,8 +49,11 @@ export function createResultsView({ state, render, controls }) {
       controls.addUndo(actions);
       actions.append(again);
 
+      // No equaliseTeamHeights() here, unlike the wheel and draft screens:
+      // both columns share one flex row, so they already stretch to match.
+      // Writing a min-height would also stop them shrinking, which is what
+      // keeps the buttons on screen when the teams are long.
       view.append(heading, summary, teamColumns(state.run.teams, { roster: state.roster }), actions);
-      equaliseTeamHeights(view);
     },
   };
 }
