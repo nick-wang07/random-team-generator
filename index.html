@@ -24,23 +24,47 @@
       </div>
 
       <div class="config-panel">
-        <label for="team-count">Teams</label>
-        <input id="team-count" type="number" min="2" max="8" value="2">
+        <h2>How are you picking teams?</h2>
+        <div class="mode-choice">
+          <label class="mode-card">
+            <input type="radio" name="pick-mode" value="wheel" checked>
+            <span class="mode-card-face">
+              <span class="mode-title">Wheel</span>
+              <span class="mode-desc">Spin for one name at a time. Teams fill in turn.</span>
+            </span>
+          </label>
+          <label class="mode-card">
+            <input type="radio" name="pick-mode" value="draft">
+            <span class="mode-card-face">
+              <span class="mode-title">Captain draft</span>
+              <span class="mode-desc">Captains take turns picking their teammates.</span>
+            </span>
+          </label>
+        </div>
 
-        <fieldset class="draft-options">
-          <legend>Captain draft</legend>
-          <label><input type="radio" name="draft-order" value="snake" checked> Snake (A B B A)</label>
-          <label><input type="radio" name="draft-order" value="alternating"> Alternating (A B A B)</label>
-          <hr>
-          <label><input type="radio" name="captain-mode" value="spin" checked> Spin for captains</label>
-          <label><input type="radio" name="captain-mode" value="choose"> Choose captains</label>
-          <ul id="captain-list" class="roster-list" hidden></ul>
-        </fieldset>
+        <div class="field-row">
+          <label for="team-count">Teams</label>
+          <input id="team-count" type="number" min="2" max="8" value="2">
+        </div>
+
+        <div id="draft-config" hidden>
+          <fieldset class="draft-options">
+            <legend>Pick order</legend>
+            <label><input type="radio" name="draft-order" value="snake" checked> Snake (A B B A)</label>
+            <label><input type="radio" name="draft-order" value="alternating"> Alternating (A B A B)</label>
+          </fieldset>
+          <fieldset class="draft-options">
+            <legend>Captains</legend>
+            <label><input type="radio" name="captain-mode" value="spin" checked> Spin for them</label>
+            <label><input type="radio" name="captain-mode" value="choose"> Choose them</label>
+            <ul id="captain-list" class="roster-list" hidden></ul>
+          </fieldset>
+        </div>
 
         <p id="setup-error" class="error" hidden></p>
         <div class="start-buttons">
           <button id="start-wheel-btn" type="button">Spin the wheel</button>
-          <button id="start-draft-btn" type="button">Captain draft</button>
+          <button id="start-draft-btn" type="button" hidden>Start the draft</button>
         </div>
       </div>
     </section>

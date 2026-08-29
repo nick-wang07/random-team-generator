@@ -21,6 +21,8 @@ export const state = {
 // reads back `teamCount` and `draftOrder` and drops the rest, so it resets
 // to the default every session rather than surviving a refresh.
 state.config.captainMode = state.config.captainMode ?? 'spin';
+// Same deal: which of the two ways to pick teams is on screen. Session-only.
+state.config.pickMode = state.config.pickMode ?? 'wheel';
 state.captains = [];
 
 const el = (id) => document.getElementById(id);
@@ -267,13 +269,24 @@ function renderSetup() {
   // An unresolved editor error takes priority over the team-count message so
   // an incidental re-render (checkbox, add, team count) doesn't erase it.
   showError(editingId && editingError ? editingError : check.ok ? '' : check.reason);
-  el('start-wheel-btn').disabled = !check.ok;
 
+  // Everything specific to the draft — pick order, captains, the captain
+  // list — stays out of sight until the draft is the chosen mode, and only
+  // the start button for the chosen mode is offered.
+  const drafting = state.config.pickMode === 'draft';
+  el('draft-config').hidden = !drafting;
+  el('start-wheel-btn').hidden = drafting;
+  el('start-draft-btn').hidden = !drafting;
+
+  el('start-wheel-btn').disabled = !check.ok;
   const draftCheck = validateDraftSetup();
   el('start-draft-btn').disabled = !draftCheck.ok;
   // Same priority as above: an unresolved editor error must not be clobbered
-  // by the draft-specific message on an incidental re-render either.
-  if (check.ok && !draftCheck.ok && !(editingId && editingError)) showError(draftCheck.reason);
+  // by the draft-specific message on an incidental re-render either. The
+  // draft's own complaint is only relevant while the draft is on screen.
+  if (drafting && check.ok && !draftCheck.ok && !(editingId && editingError)) {
+    showError(draftCheck.reason);
+  }
 }
 
 function nameOf(id) {
@@ -641,6 +654,17 @@ el('team-count').addEventListener('input', () => {
   persist();
   render();
 });
+
+for (const radio of document.querySelectorAll('input[name="pick-mode"]')) {
+  radio.checked = radio.value === state.config.pickMode;
+  radio.addEventListener('change', () => {
+    state.config.pickMode = radio.value;
+    // Leaving the draft behind drops any half-made captain selection, so
+    // coming back to it starts clean rather than half-filled from before.
+    if (radio.value !== 'draft') state.captains = [];
+    render();
+  });
+}
 
 for (const radio of document.querySelectorAll('input[name="draft-order"]')) {
   radio.checked = radio.value === state.config.draftOrder;

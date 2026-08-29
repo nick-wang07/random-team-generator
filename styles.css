@@ -211,3 +211,40 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 
 /* Only offer the affordance while there is a spin to cut short. */
 #wheel-canvas.is-spinning { cursor: pointer; }
+
+/* Mode choice: two cards, one of which is obviously the live one. The radio
+   itself is hidden but still focusable, so keyboard and screen readers get
+   the real control and everyone else gets the card. */
+.config-panel h2 { margin: 0 0 14px; }
+.mode-choice { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
+.mode-card { flex: 1 1 260px; cursor: pointer; }
+.mode-card input { position: absolute; opacity: 0; width: 0; height: 0; }
+.mode-card-face {
+  display: block; height: 100%;
+  padding: 16px 18px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.mode-card:hover .mode-card-face { border-color: var(--muted); }
+.mode-card input:checked + .mode-card-face {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+}
+.mode-card input:focus-visible + .mode-card-face { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mode-title { display: block; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.mode-card input:checked + .mode-card-face .mode-title { color: var(--accent); }
+.mode-desc { display: block; color: var(--muted); font-size: 15px; line-height: 1.4; }
+
+.field-row { display: flex; align-items: center; gap: 12px; }
+.field-row label { font-size: 18px; }
+
+/* The two draft fieldsets sit side by side when there is room; the captain
+   list makes its own column taller, so they align to the top. */
+#draft-config { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+/* `display: flex` above outranks the UA rule behind the hidden attribute, so
+   hiding it has to be said explicitly or the draft options never go away. */
+#draft-config[hidden] { display: none; }
+#draft-config .draft-options { flex: 1 1 260px; margin: 18px 0 0; }
+#draft-config .roster-list { margin: 12px 0 0; }
