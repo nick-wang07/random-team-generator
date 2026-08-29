@@ -265,11 +265,19 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 .panel-head h2 { margin: 0; }
 
 /* Reset lives under the add form, its left edge on the same line as the name
-   box above it. Muted rather than prominent: it is the only button here that
-   throws away the whole list. */
+   box above it. An outline rather than a bare link — as a link it read as
+   label text and nobody could tell it was clickable — but muted rather than
+   filled, because it is the only button here that throws the whole list away.
+   It turns red on approach, which is the only warning it gives. */
 .panel-foot { display: flex; justify-content: flex-start; margin-top: 10px; }
-.panel-foot .link-btn { color: var(--muted); font-weight: 500; }
-.panel-foot .link-btn:hover { color: var(--danger); }
+.reset-btn {
+  background: none; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 13px; font-size: 15px;
+}
+.reset-btn:hover, .reset-btn:focus-visible {
+  border-color: var(--danger); color: var(--danger);
+}
 .presence { display: flex; align-items: baseline; gap: 12px; }
 .present-count { color: var(--muted); font-size: 15px; white-space: nowrap; }
 .link-btn {

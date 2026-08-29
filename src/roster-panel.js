@@ -259,7 +259,10 @@ export function createRosterPanel({ state, persist, render, showError }) {
   // here.
   el('reset-roster-btn').addEventListener('click', () => {
     forgetEditor();
-    rememberUndo('Reset to the default list.');
+    // Past tense on purpose: the notice sits a few lines above the button
+    // that produced it, and phrased as an instruction the two read as two
+    // controls that do the same thing.
+    rememberUndo('Default list restored.');
     const { roster, present } = defaultRosterState();
     state.roster = roster;
     state.present = present;
