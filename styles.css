@@ -245,11 +245,16 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
    on the right. With one column an eight-person roster pushed the start
    button 1650px down a 900px window — you scrolled past your whole group to
    start, every session. */
+/* Stretch, not start: the two panels are a matched pair, and letting each
+   find its own height left the shorter one stopping in mid-air against the
+   other. They fill the same row now and scroll whatever they cannot show,
+   so the pair reads as one composition in every mode — the wheel's short
+   options and the draft's long ones alike. */
 .setup-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 .setup-columns > * { margin-bottom: 0; }
 
@@ -384,15 +389,11 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
   margin: 0 0 14px; color: var(--muted); font-size: 15px;
 }
 
-/* The captain list is the roster again, so it grows the same way and needs
-   the same cap — without it, choosing captains pushed setup back over the
-   fold (1648px in an 888px window with fourteen people), which is the exact
-   problem the two-column layout exists to solve. */
-#captain-list {
-  max-height: min(34vh, 330px);
-  overflow-y: auto;
-  margin: 12px 0 0;
-}
+/* The captain list used to carry its own height cap, back when it could push
+   setup over the fold. The panel around it is bounded and scrolls now, so the
+   cap only bought a scrollbar inside a scrollbar — two of them side by side,
+   nested, for the same gesture. The panel does the scrolling. */
+#captain-list { margin: 12px 0 0; }
 
 /* On the wheel screen the highlighted team is not choosing anyone — it is
    the team this spin will fill — so it gets its own wording. */
@@ -414,12 +415,26 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
   height: calc(100dvh - 96px);
   min-height: 0;
 }
-#setup-view h1 { flex: none; }
+/* Centred over a symmetrical pair of panels. This is the one screen with a
+   product title rather than a status heading, so it gets to sit like one. */
+#setup-view h1 { flex: none; text-align: center; }
+#setup-view .storage-notice, #setup-view > .notice { text-align: center; }
 #setup-view .setup-columns { flex: 1 1 auto; min-height: 0; }
 #setup-view .roster-panel,
 #setup-view .config-panel {
   max-height: 100%;
   overflow-y: auto;
+}
+
+/* The roster panel matches the config panel's shape: a fixed head and foot
+   with the list taking whatever is left. Without this the list keeps its own
+   cap and the panel is padded out with dead space below the add form. */
+#setup-view .roster-panel { display: flex; flex-direction: column; overflow: hidden; }
+#setup-view .roster-panel .panel-head,
+#setup-view .roster-panel .removal-notice,
+#setup-view .roster-panel .add-form { flex: none; }
+#setup-view .roster-panel .roster-list {
+  flex: 1 1 auto; min-height: 0; max-height: none;
 }
 
 /* The config panel scrolls its options, but the preview, any error and the
