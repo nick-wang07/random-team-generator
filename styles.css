@@ -445,30 +445,59 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
   overflow-y: auto;
 }
 
-/* The roster panel matches the config panel's shape: a fixed head and foot
-   with the list taking whatever is left. Without this the list keeps its own
-   cap and the panel is padded out with dead space below the add form. */
-#setup-view .roster-panel { display: flex; flex-direction: column; overflow: hidden; }
+/* Both panels are three bands: a head that stays put, a region that scrolls,
+   and a foot that stays put. Scrolling to find "Start" is the thing this
+   layout exists to prevent, and the same goes for the add box on the left. */
+#setup-view .roster-panel,
+#setup-view .config-panel {
+  display: flex; flex-direction: column; overflow: hidden;
+}
 #setup-view .roster-panel .panel-head,
-#setup-view .roster-panel .removal-notice,
-#setup-view .roster-panel .add-form { flex: none; }
-/* Fills the panel, but never past the cap that decides how tall the pair gets
-   to be. The config panel's scrolling region carries the same cap, so neither
-   panel can drag the pair taller than the other. */
-#setup-view .roster-panel .roster-list { flex: 1 1 auto; min-height: 0; }
-#setup-view .config-scroll { max-height: min(52vh, 560px); }
+#setup-view .config-panel > h2,
+#setup-view .panel-foot-group { flex: none; }
+/* The heading's bottom margin matches .panel-head's on the left, so both
+   scrolling regions start on the same line. */
+#setup-view .config-panel > h2 { margin: 0 0 10px; }
+/* Each fills its panel, but never past the cap that decides how tall the pair
+   gets to be, so neither panel can drag the pair taller than the other.
 
-/* Whichever panel is the shorter of the two takes the slack. Its foot stays
-   on the shared baseline rather than floating up under its own content. */
-#setup-view .roster-panel .add-form,
-#setup-view .config-panel .split-preview { margin-top: auto; }
-#setup-view .roster-panel .panel-foot { flex: none; }
+   The pixel half of the cap is set by the tallest thing that should never
+   need scrolling: the draft options with captains spun for, which come to
+   561px. At 560 that scrolled by a single pixel — a scrollbar for one pixel
+   of content. The vh half is what shrinks it on smaller screens, and is set
+   so the pixel cap still wins at 1080 tall. */
+#setup-view .roster-panel .roster-list,
+#setup-view .config-scroll { flex: 1 1 auto; min-height: 0; max-height: min(56vh, 600px); }
+#setup-view .panel-foot-group { margin-top: auto; }
+/* The spacing under a scrolling region belongs to the foot, not to the region
+   itself. As a margin on the roster list only, it made that box 16px shorter
+   than its neighbour whenever the two actually stretched to fill their shared
+   row — which is every window small enough to squeeze the panels. */
+#setup-view .roster-panel .roster-list,
+#setup-view .config-scroll { margin-bottom: 0; }
+#setup-view .config-panel .split-preview { margin-top: 0; }
+#setup-view .panel-foot-group { padding-top: 16px; }
 
-/* The config panel scrolls its options, but the preview, any error and the
-   start button stay pinned at the bottom — scrolling to find "Start" is the
-   thing this layout exists to prevent. */
-#setup-view .config-panel { display: flex; flex-direction: column; overflow: hidden; }
-.config-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-#setup-view .config-panel .split-preview,
-#setup-view .config-panel .error,
-#setup-view .config-panel .start-buttons { flex: none; }
+/* The two feet hold different things — an add box and a reset button on the
+   left, a preview, an error line and a start button on the right — so left to
+   themselves they are different heights, and the scrolling region above the
+   shorter one runs on further down the panel than its neighbour. Subgrid puts
+   all six bands on three shared rows, so the two scroll boxes begin and end on
+   exactly the same lines whatever their feet contain. Browsers without it fall
+   back to the flex rules above: aligned at full height, drifting by the
+   difference in the feet only once the window squeezes the panels. */
+@supports (grid-template-rows: subgrid) {
+  /* Only while the two are actually side by side. Below this the columns
+     stack, and pinning both panels to rows 1-3 would sit them on top of each
+     other. Stacked, there is nothing to align them to anyway. */
+  @media (min-width: 901px) {
+    #setup-view .setup-columns { grid-template-rows: auto minmax(0, 1fr) auto; }
+    #setup-view .roster-panel,
+    #setup-view .config-panel {
+      display: grid;
+      grid-row: 1 / -1;
+      grid-template-rows: subgrid;
+    }
+    #setup-view .panel-foot-group { margin-top: 0; }
+  }
+}

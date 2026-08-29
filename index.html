@@ -25,19 +25,24 @@
           </div>
         </div>
         <ul id="roster-list" class="roster-list"></ul>
-        <p id="removal-notice" class="removal-notice" hidden></p>
-        <form id="add-form" class="add-form">
-          <input id="name-input" type="text" placeholder="Add a name" autocomplete="off">
-          <button id="add-btn" type="submit">Add</button>
-        </form>
-        <div class="panel-foot">
-          <button id="reset-roster-btn" type="button" class="reset-btn">Reset to default list</button>
+        <div class="panel-foot-group">
+          <p id="removal-notice" class="removal-notice" hidden></p>
+          <form id="add-form" class="add-form">
+            <input id="name-input" type="text" placeholder="Add a name" autocomplete="off">
+            <button id="add-btn" type="submit">Add</button>
+          </form>
+          <div class="panel-foot">
+            <button id="reset-roster-btn" type="button" class="reset-btn">Reset to default list</button>
+          </div>
         </div>
       </div>
 
       <div class="config-panel">
-        <div class="config-scroll">
+        <!-- The heading sits OUTSIDE .config-scroll, matching the roster
+             panel's head: it stays put while the options scroll under it, and
+             the two panels' scroll boxes start and end on the same lines. -->
         <h2>How are you picking teams?</h2>
+        <div class="config-scroll">
         <div class="mode-choice">
           <label class="mode-card">
             <input type="radio" name="pick-mode" value="wheel" checked>
@@ -75,11 +80,13 @@
         </div>
 
         </div>
-        <p id="split-preview" class="split-preview"></p>
-        <p id="setup-error" class="error" hidden></p>
-        <div class="start-buttons">
-          <button id="start-wheel-btn" type="button">Spin the wheel</button>
-          <button id="start-draft-btn" type="button" hidden>Start the draft</button>
+        <div class="panel-foot-group">
+          <p id="split-preview" class="split-preview"></p>
+          <p id="setup-error" class="error" hidden></p>
+          <div class="start-buttons">
+            <button id="start-wheel-btn" type="button">Spin the wheel</button>
+            <button id="start-draft-btn" type="button" hidden>Start the draft</button>
+          </div>
         </div>
       </div>
       </div>
