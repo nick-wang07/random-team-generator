@@ -6,7 +6,7 @@ export const STORAGE_KEY = 'rtg.v1';
 // there is a saved roster it wins, including an empty one someone cleared on
 // purpose.
 const DEFAULT_NAMES = [
-  'Andrew', 'Brandon', 'Brennan', 'Chase', 'Chin', 'Colton', 'Craig',
+  'Andrew', 'Brandon', 'Brennan', 'Chase', 'Chin', 'Colten', 'Craig',
   'Isaiah', 'Jordan', 'Major', 'Nick', 'Nikhil', 'Walter', 'Wyatt',
 ];
 
