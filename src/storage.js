@@ -2,9 +2,8 @@ export const STORAGE_KEY = 'rtg.v1';
 
 // The regulars, so the app is usable the moment it opens instead of starting
 // on an empty list. Ids are slugs rather than random, so they stay stable and
-// readable in storage. This only seeds a browser that has never saved: once
-// there is a saved roster it wins, including an empty one someone cleared on
-// purpose.
+// readable in storage. The roster is intentionally session-only: each page
+// load starts with the current list below, with everyone selected.
 const DEFAULT_NAMES = [
   'Andrew', 'Brandon', 'Brennan', 'Chase', 'Chin', 'Colten', 'Craig',
   'Isaiah', 'Jordan', 'Major', 'Nick', 'Nikhil', 'Walter', 'Wyatt',
@@ -62,9 +61,10 @@ export function createStorage(backend) {
       try {
         const parsed = JSON.parse(raw);
         const config = parsed && parsed.config ? parsed.config : {};
+        const { roster, present } = defaults();
         return {
-          roster: Array.isArray(parsed.roster) ? parsed.roster : [],
-          present: Array.isArray(parsed.present) ? parsed.present : [],
+          roster,
+          present,
           config: {
             teamCount: Number.isInteger(config.teamCount) ? config.teamCount : 2,
             draftOrder: config.draftOrder === 'alternating' ? 'alternating' : 'snake',
@@ -79,8 +79,6 @@ export function createStorage(backend) {
       if (!backend) return false;
       try {
         backend.setItem(STORAGE_KEY, JSON.stringify({
-          roster: state.roster,
-          present: state.present,
           config: state.config,
         }));
         return true;

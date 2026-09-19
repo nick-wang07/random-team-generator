@@ -15,7 +15,7 @@ test('load returns defaults when nothing is stored', () => {
   assert.deepEqual(store.load(), DEFAULT_STATE);
 });
 
-test('save then load round-trips the state', () => {
+test('save then load preserves configuration without persisting the roster', () => {
   const backend = fakeBackend();
   const state = {
     roster: [{ id: 'a', name: 'Nick' }],
@@ -23,7 +23,27 @@ test('save then load round-trips the state', () => {
     config: { teamCount: 3, draftOrder: 'alternating' },
   };
   createStorage(backend).save(state);
-  assert.deepEqual(createStorage(backend).load(), state);
+  assert.deepEqual(JSON.parse(backend.getItem(STORAGE_KEY)), { config: state.config });
+  const loaded = createStorage(backend).load();
+  assert.deepEqual(loaded.roster, DEFAULT_STATE.roster);
+  assert.deepEqual(loaded.present, DEFAULT_STATE.present);
+  assert.deepEqual(loaded.config, state.config);
+});
+
+test('load ignores a previously saved roster and selects every current default', () => {
+  const backend = fakeBackend({
+    [STORAGE_KEY]: JSON.stringify({
+      roster: [{ id: 'colton', name: 'Colton' }],
+      present: ['colton'],
+      config: { teamCount: 3, draftOrder: 'alternating' },
+    }),
+  });
+
+  const loaded = createStorage(backend).load();
+
+  assert.deepEqual(loaded.roster, DEFAULT_STATE.roster);
+  assert.deepEqual(loaded.present, DEFAULT_STATE.present);
+  assert.deepEqual(loaded.config, { teamCount: 3, draftOrder: 'alternating' });
 });
 
 test('corrupt stored data falls back to defaults instead of throwing', () => {
@@ -31,10 +51,11 @@ test('corrupt stored data falls back to defaults instead of throwing', () => {
   assert.deepEqual(store.load(), DEFAULT_STATE);
 });
 
-test('partial stored data is filled in with defaults', () => {
+test('partial stored data starts with the default roster and selection', () => {
   const store = createStorage(fakeBackend({ [STORAGE_KEY]: '{"roster":[{"id":"a","name":"Nick"}]}' }));
   const loaded = store.load();
-  assert.deepEqual(loaded.present, []);
+  assert.deepEqual(loaded.roster, DEFAULT_STATE.roster);
+  assert.deepEqual(loaded.present, DEFAULT_STATE.present);
   assert.deepEqual(loaded.config, { teamCount: 2, draftOrder: 'snake' });
 });
 
@@ -67,9 +88,10 @@ test('a browser that has never saved is seeded with the regulars, all present', 
   assert.equal(new Set(loaded.roster.map((p) => p.id)).size, 14, 'ids are unique');
 });
 
-test('an empty roster someone cleared on purpose is not re-seeded', () => {
+test('an empty saved roster is replaced by the current default roster', () => {
   const store = createStorage(fakeBackend({ [STORAGE_KEY]: '{"roster":[],"present":[]}' }));
-  assert.deepEqual(store.load().roster, []);
+  assert.deepEqual(store.load().roster, DEFAULT_STATE.roster);
+  assert.deepEqual(store.load().present, DEFAULT_STATE.present);
 });
 
 test('defaultRosterState is the seed roster with everyone present', () => {
