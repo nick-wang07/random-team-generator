@@ -14,11 +14,8 @@ import { createRunView } from './run-view.js';
 import { createDraftView } from './draft-view.js';
 import { createResultsView } from './results-view.js';
 
-// The coordinator: it owns the state, decides which of the four screens is on
-// show, and hands each screen module the few things it needs. Every screen
-// gets `render` rather than calling its own renderer, so a change anywhere
-// always redraws the whole app from state — there is no partial-update path
-// to get out of sync.
+// Owns the state and decides which screen is showing. Screens are handed
+// `render` and never redraw themselves, so every change redraws the whole app.
 
 const store = createStorage(browserBackend());
 const loaded = store.load();
@@ -29,12 +26,8 @@ export const state = {
   config: loaded.config,
   run: null,
 };
-// `captainMode` is a per-session choice: persist()/save() writes it out as
-// part of state.config like everything else, but storage.js's load() only
-// reads back `teamCount` and `draftOrder` and drops the rest, so it resets
-// to the default every session rather than surviving a refresh.
+// Session-only settings: storage.load() does not read these back.
 state.config.captainMode = state.config.captainMode ?? 'spin';
-// Same deal: which of the two ways to pick teams is on screen. Session-only.
 state.config.pickMode = state.config.pickMode ?? 'wheel';
 state.captains = [];
 
@@ -42,12 +35,7 @@ function persist() {
   store.save({ roster: state.roster, present: state.present, config: state.config });
 }
 
-// The error is never hidden — it shares one always-present line with the split
-// preview (see .foot-status). It used to toggle `hidden`, which changed the
-// height of the config panel's foot, and because subgrid pins both setup panels
-// to the same three rows, that resized the ROSTER's scroll box on the other
-// side of the screen: picking "Choose them" made the roster list jump 34px
-// shorter, as did any other error.
+// The error line is never hidden, so showing one does not resize the panels.
 function showError(message) {
   el('setup-error').textContent = message;
 }
@@ -55,8 +43,7 @@ function showError(message) {
 const wheel = createWheel(el('wheel-canvas'));
 
 window.addEventListener('resize', () => { wheel.resize(); wheel.draw(); });
-// Click the wheel to cut a spin short. It lands on the same angle either way,
-// so this only skips the wait — it cannot change who won.
+// Cuts a spin short. It lands on the same angle, so the winner cannot change.
 el('wheel-canvas').addEventListener('click', () => wheel.finish());
 
 const reveal = createReveal({
@@ -66,8 +53,7 @@ const reveal = createReveal({
   closeButton: el('reveal-close'),
 });
 
-// A spin or a reveal in flight owns the run until it lands. Every control that
-// could change the run out from under it asks this first.
+// Nothing may change the run while a spin or reveal is in flight.
 const isBusy = () => wheel.isSpinning() || reveal.isRevealing();
 
 const rosterPanel = createRosterPanel({ state, persist, render, showError });
@@ -76,8 +62,7 @@ const captainPicker = createCaptainPicker({
   title: el('captain-dialog-title'),
   count: el('captain-dialog-count'),
   chips: el('captain-chips'),
-  // Picks commit as they are made, the same as the roster's own checkboxes;
-  // "Done" only closes the dialog.
+  // Picks commit live; "Done" only closes the dialog.
   onChange: (captains) => {
     state.captains = captains;
     render();
@@ -106,14 +91,12 @@ function startWheelRun() {
     teamCount: state.config.teamCount,
     order: pickRotation(present.length, state.config.teamCount),
   });
-  // A rename that failed to commit (blur-rejected) can leave the editor
-  // logically open right up to the moment the host clicks a Start button in
-  // the same gesture. Starting a run abandons whatever row was mid-edit.
+  // Starting a run abandons any rename still in progress.
   rosterPanel.forgetEditor();
   render();
 }
 
-function beginDraftFromCaptains(captainIds) {
+function beginDraftFromCaptains(captainIds, previous = null) {
   const teamCount = state.config.teamCount;
   const present = [...state.present];
   state.run = startRun({
@@ -122,13 +105,12 @@ function beginDraftFromCaptains(captainIds) {
     teamCount,
     order: draftSequence(teamCount, present.length - teamCount, state.config.draftOrder),
     seeded: captainIds.map((id) => [id]),
+    previous,
   });
   render();
 }
 
 function startDraft() {
-  // See the matching comment in startWheelRun: starting any run abandons
-  // whatever roster row was mid-edit, so clear the editor here too.
   rosterPanel.forgetEditor();
   if (state.config.captainMode === 'choose') {
     beginDraftFromCaptains(state.captains);
@@ -147,9 +129,11 @@ function startDraft() {
 
 export function render() {
   if (state.run && state.run.mode === 'captains' && isComplete(state.run)) {
-    const captainIds = state.run.teams.map((team) => team.members[0]);
+    const captainRun = state.run;
+    const captainIds = captainRun.teams.map((team) => team.members[0]);
     state.run = null;
-    beginDraftFromCaptains(captainIds);
+    // Kept on the draft so undo can go back into the captain spins.
+    beginDraftFromCaptains(captainIds, captainRun);
     return;
   }
 
@@ -170,10 +154,8 @@ export function render() {
   moveFocusOnViewChange(finished ? 'results' : drafting ? 'draft' : running ? 'run' : 'setup');
 }
 
-// Switching views used to leave focus on a button that had just been hidden,
-// which drops a keyboard user back to the top of the document with no idea
-// where they are. Move it to the new view's heading instead, and only when
-// the view actually changed so it never steals focus mid-typing.
+// On a view change, move focus to the new view's heading so it is not left on
+// a hidden button. Only on a change, so it never steals focus mid-typing.
 let shownView = null;
 function moveFocusOnViewChange(view) {
   if (view === shownView) return;
@@ -191,9 +173,8 @@ function moveFocusOnViewChange(view) {
 }
 
 document.addEventListener('keydown', (event) => {
-  // While the reveal card is up, Escape and Space close it rather than
-  // reaching the wheel — otherwise one keypress would dismiss the card and
-  // immediately start the next spin.
+  // While the reveal is up, Space and Escape only close it, so one keypress
+  // cannot dismiss the card and start the next spin.
   if (reveal.isRevealing()) {
     if (event.code !== 'Space' && event.key !== 'Escape') return;
     event.preventDefault();

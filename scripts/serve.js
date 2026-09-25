@@ -1,17 +1,12 @@
-// Static server for local development.
-//
-// Sends Cache-Control: no-store on everything. Chrome will otherwise hold on
-// to styles.css across reloads — including reloads of a page URL carrying a
-// fresh ?v= query, because that query does not change the stylesheet's own
-// URL — and you edit CSS, reload, and see the previous version.
+// Static server for local development. Sends Cache-Control: no-store so an
+// edited styles.css is never served stale from Chrome's cache.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { extname, join, resolve, sep } from 'node:path';
+import { extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { publicPath } from './public-path.js';
 
-// fileURLToPath, not URL.pathname: on Windows the latter yields "/C:/Users/..."
-// with forward slashes, which never matches the backslash paths join() builds,
-// so the containment check below rejected every request with a 403.
+// fileURLToPath, not URL.pathname, which gives "/C:/..." on Windows.
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const port = Number(process.argv[2] ?? 8777);
 const types = {
@@ -19,17 +14,15 @@ const types = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.png': 'image/png',
-  '.json': 'application/json; charset=utf-8',
 };
 
 const server = createServer(async (req, res) => {
-  const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  // normalize collapses any ../ before it can climb out of the project.
-  const file = resolve(join(root, path === '/' ? '/index.html' : path));
-  if (file !== root && !file.startsWith(root + sep)) {
-    res.writeHead(403).end('Forbidden');
+  const { status, rel } = publicPath(req.url);
+  if (status !== 200) {
+    res.writeHead(status).end(status === 400 ? 'Bad request' : 'Not found');
     return;
   }
+  const file = join(root, rel);
   try {
     const body = await readFile(file);
     res.writeHead(200, {
@@ -41,10 +34,13 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(port, () => console.log(`Team Generator on http://localhost:${port}`));
+// Loopback only: nothing else on the network can reach it.
+server.listen(port, '127.0.0.1', () => {
+  // The real port, which differs from `port` when started with 0 (as the tests do).
+  console.log(`Team Generator on http://localhost:${server.address().port}`);
+});
 
-// A plain `throw` here printed an unhandled 'error' event and a stack trace,
-// which says nothing about what to do next.
+// Say what to do about a taken port instead of throwing.
 server.on('error', (err) => {
   if (err.code !== 'EADDRINUSE') throw err;
   console.error(
@@ -58,20 +54,9 @@ server.on('error', (err) => {
   process.exit(1);
 });
 
-// Shut down on a signal so the port is released rather than held by a process
-// that outlives the console it was started from.
-//
-// closeAllConnections() covers a request that is still in flight when the
-// signal lands: server.close() stops new connections and waits for the current
-// ones, and an in-flight request would hold the process open. It is NOT needed
-// for parked keep-alive sockets, despite the folklore — measured on Node 24,
-// close() reaps idle connections on its own (Node 19+ behaviour) and shutdown
-// takes ~5ms with or without this call.
-//
-// SIGINT covers Ctrl+C; SIGTERM covers a kill from a task runner or an editor
-// stopping the task. Neither fires if the process is orphaned — killed without
-// a signal, or left behind when its parent npm wrapper dies — which is the
-// usual reason a stale server is still holding the port. Hence serve:who.
+// Release the port on Ctrl+C or a kill. closeAllConnections() stops an
+// in-flight request from holding the process open. An orphaned process gets
+// neither signal, which is what `npm run serve:who` is for.
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     server.closeAllConnections();

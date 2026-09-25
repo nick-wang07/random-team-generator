@@ -1,46 +1,32 @@
 import { el } from './dom.js';
-import { addPerson, removePerson, renamePerson, prunePresent } from './roster.js';
+import { addPerson, removePerson, renamePerson, prunePresent, displayName } from './roster.js';
 import { defaultRosterState } from './storage.js';
 
-// The left-hand panel on the setup screen: who is on the roster, who is in the
-// call, renaming, removing, adding. It owns the whole inline name editor —
-// four pieces of transient state that only make sense together — so nothing
-// outside this file can get half of that dance wrong.
-//
-// `showError` writes to the shared error line over in the config panel, which
-// is why it is passed in rather than looked up here: this panel does not own
-// that node, it only has things to say through it.
+// The setup screen's roster panel: who is in the call, adding, renaming and
+// removing. It owns the inline rename editor's state.
 export function createRosterPanel({ state, persist, render, showError }) {
-  // id of the roster row currently in edit mode, or null. Not part of `state` —
-  // it's transient UI state, not something that gets persisted.
+  // Id of the row being renamed, or null.
   let editingId = null;
-  // Live snapshot of the open editor's <input>, captured just before any
-  // render() rebuilds the roster list out from under it. render() gets called
-  // for lots of reasons unrelated to the edit in progress (a different row's
-  // checkbox, adding a person, changing the team count) — without this, each
-  // of those would silently reset the editor back to the persisted name.
+  // The open editor's text and caret, saved before each render so unrelated
+  // renders (a checkbox, the team count) don't reset what's being typed.
   let editingDraft = null; // { id, value, selectionStart, selectionEnd } | null
-  // Error message tied to the still-open editor (e.g. a rejected duplicate or
-  // empty name). The setup screen prefers this over its own validation message
-  // so an incidental re-render doesn't clobber an error the host hasn't
-  // resolved yet.
+  // A rejected rename's error, kept while its editor stays open.
   let editingError = null;
-  // True only for the render() that first opens an editor, so the initial open
-  // selects the whole name (for fast overtyping) without re-selecting-all — and
-  // eating the next keystroke — on every incidental re-render while mid-typing.
+  // Select the whole name only on the render that opens the editor.
   let editingJustOpened = false;
-  // The last destructive act, kept only so it can be undone: the message to
-  // show, and the roster and presence it replaced. A snapshot rather than a
-  // description of the change, so taking one person off the list and
-  // replacing the whole list both undo through the same path.
-  // { message, roster, present } | null
+  // Snapshot for the undo notice: { message, roster, present } | null
   let lastUndo = null;
 
-  // Call BEFORE the change, while state still holds what is about to be lost.
-  // Safe to keep the references: every roster and presence update replaces the
-  // array rather than editing it, so the snapshot cannot be written through.
+  // Call before the change. Updates always replace the arrays, so keeping the
+  // references is safe.
   function rememberUndo(message) {
     lastUndo = { message, roster: state.roster, present: state.present };
+  }
+
+  // Any other roster change drops the undo: restoring the snapshot now would
+  // also silently throw that change away.
+  function forgetUndo() {
+    lastUndo = null;
   }
 
   function forgetEditor() {
@@ -49,10 +35,7 @@ export function createRosterPanel({ state, persist, render, showError }) {
     editingError = null;
   }
 
-  // The one way anything outside asks "is there an unresolved rename on
-  // screen?". Returns the message to show, or null. Callers must not
-  // reconstruct this from parts — the two-condition check is the whole point,
-  // and splitting it is what once let a stale error outlive its editor.
+  // The open editor's error, or null.
   function openEditorError() {
     return editingId && editingError ? editingError : null;
   }
@@ -61,6 +44,7 @@ export function createRosterPanel({ state, persist, render, showError }) {
     state.present = isPresent
       ? [...new Set([...state.present, id])]
       : state.present.filter((x) => x !== id);
+    forgetUndo();
     persist();
     render();
   }
@@ -84,15 +68,12 @@ export function createRosterPanel({ state, persist, render, showError }) {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'name-edit';
-    // Tags which person this live input belongs to, so renderRoster()'s
-    // pre-rebuild snapshot never mistakes a different (possibly abandoned)
-    // row's leftover editor for the one that's actually still open.
+    // Marks whose editor this is, so a stale input from another row is never
+    // mistaken for the open one.
     input.dataset.personId = person.id;
     input.value = editingDraft && editingDraft.id === person.id ? editingDraft.value : person.name;
 
-    // Guards against a commit firing twice: committing/cancelling detaches this
-    // input via render(), and browsers fire a blur event on an element removed
-    // from the document, which would otherwise re-trigger the blur handler below.
+    // Removing the input fires blur, which would commit a second time.
     let settled = false;
 
     function commit() {
@@ -101,10 +82,12 @@ export function createRosterPanel({ state, persist, render, showError }) {
       try {
         state.roster = renamePerson(state.roster, person.id, input.value);
         forgetEditor();
+        // Clicking away from an unchanged name is not a change.
+        if (displayName(state.roster, person.id) !== person.name) forgetUndo();
         persist();
         render();
       } catch (err) {
-        // Leave the editor open with the typed text so the host can fix it.
+        // Keep the editor open with the typed text so it can be fixed.
         settled = false;
         editingError = err.message;
         showError(err.message);
@@ -148,8 +131,6 @@ export function createRosterPanel({ state, persist, render, showError }) {
     remove.title = `Remove ${person.name} from the roster`;
     remove.addEventListener('click', () => {
       if (editingId === person.id) forgetEditor();
-      // The roster is the one thing here that outlives the session, so taking
-      // someone off it is a genuinely destructive act — hence the undo.
       rememberUndo(`Removed ${person.name}.`);
       state.roster = removePerson(state.roster, person.id);
       state.present = prunePresent(state.roster, state.present);
@@ -163,17 +144,11 @@ export function createRosterPanel({ state, persist, render, showError }) {
 
   function renderRoster() {
     const list = el('roster-list');
-    // Snapshot the live editor (value + caret) before it gets torn down, so an
-    // unrelated render() can restore it below instead of resetting to the
-    // persisted name.
+    // Save the open editor's text and caret before rebuilding the list.
     if (editingId) {
       const liveInput = list.querySelector('.name-edit');
-      // Only trust this input if it actually belongs to the row we're still
-      // editing. A row whose commit failed (and therefore skipped render())
-      // can leave a stale, abandoned .name-edit for a DIFFERENT person in the
-      // DOM — e.g. row A errors and is left open, then the host clicks
-      // straight into row B's editor without resolving A first. Without this
-      // check, A's leftover text would leak into B's freshly-opened editor.
+      // Only if it belongs to the row still being edited: a failed commit can
+      // leave another row's input behind.
       if (liveInput && liveInput.dataset.personId === editingId) {
         editingDraft = {
           id: editingId,
@@ -237,7 +212,7 @@ export function createRosterPanel({ state, persist, render, showError }) {
       ? ''
       : `${present} of ${total} in the call`;
 
-    // One button that does whichever is useful: tick everyone, or clear them.
+    // One button: select everyone, or clear everyone if all are ticked.
     const toggle = el('select-all-btn');
     const allPresent = total > 0 && present === total;
     toggle.hidden = total === 0;
@@ -249,19 +224,14 @@ export function createRosterPanel({ state, persist, render, showError }) {
     state.present = el('select-all-btn').dataset.action === 'clear'
       ? []
       : state.roster.map((person) => person.id);
+    forgetUndo();
     persist();
     render();
   });
 
-  // The roster outlives the session by design, so it can drift a long way from
-  // the regulars. This puts it back without making anyone clear it by hand —
-  // and it is itself undoable, since it throws away more than any other button
-  // here.
+  // Undoable, like remove.
   el('reset-roster-btn').addEventListener('click', () => {
     forgetEditor();
-    // Past tense on purpose: the notice sits a few lines above the button
-    // that produced it, and phrased as an instruction the two read as two
-    // controls that do the same thing.
     rememberUndo('Default list restored.');
     const { roster, present } = defaultRosterState();
     state.roster = roster;
@@ -275,14 +245,15 @@ export function createRosterPanel({ state, persist, render, showError }) {
     const input = el('name-input');
     try {
       state.roster = addPerson(state.roster, input.value);
+      // Someone being added is almost always in the call, so tick them.
+      state.present = [...state.present, state.roster[state.roster.length - 1].id];
       input.value = '';
       showError('');
+      forgetUndo();
       persist();
       render();
     } catch (err) {
-      // A stale open-editor error (if any) shouldn't silently resurface over
-      // this add-form error on the next incidental render — the host's
-      // attention is on the add form right now, not the abandoned editor.
+      // Drop any stale rename error so it can't resurface over this one.
       editingError = null;
       showError(err.message);
     }
@@ -295,9 +266,7 @@ export function createRosterPanel({ state, persist, render, showError }) {
       renderUndoNotice();
     },
     openEditorError,
-    // Starting a run abandons whatever row was mid-edit. Called from there so
-    // "Back to setup" doesn't reopen that row with the rejected text and a
-    // stale error sitting over the setup validation message.
+    // Called when a run starts, so returning to setup doesn't reopen a rename.
     forgetEditor,
   };
 }

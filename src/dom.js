@@ -1,3 +1,2 @@
-// index.html is the source of truth for element ids; this is the only way the
-// view modules reach them.
+// Element ids live in index.html.
 export const el = (id) => document.getElementById(id);

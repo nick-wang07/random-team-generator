@@ -6,9 +6,7 @@ import { renderFlanks, equaliseTeamHeights } from './team-board.js';
 
 // The draft board: captains take turns choosing from the pool in the middle.
 export function createDraftView({ state, render, controls }) {
-  // The pick order laid out as a strip, with the current pick marked. Snake
-  // order means a team sometimes picks twice in a row, which looks like a bug
-  // unless you can see the shape of the whole thing.
+  // The whole pick order, so snake's back-to-back picks don't look like a bug.
   function renderPickOrder() {
     const strip = el('draft-order-strip');
     strip.replaceChildren();

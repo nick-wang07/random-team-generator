@@ -1,14 +1,9 @@
 import { displayName } from './roster.js';
 import { teamHasWalt, commiserate } from './format.js';
 
-// Builds the team columns shared by the wheel screen, the draft board and the
-// results screen. Everything it needs is passed in, so it holds no app state
-// and can be rendered against any roster.
-//
-// `activeIndex` marks the team currently on the clock, if any — the draft
-// board uses it so the board itself shows whose turn it is rather than
-// leaving that to the heading alone. `slots` pads each team out to the size
-// it will end up, so empty columns read as waiting rather than as broken.
+// Team columns for the wheel, draft and results screens. `activeIndex`
+// outlines the team whose turn it is; `slots` pads each team with empty rows
+// up to its final size.
 export function teamColumns(teams, { roster, activeIndex = null, slots = null } = {}) {
   const wrap = document.createElement('div');
   wrap.className = 'team-columns';

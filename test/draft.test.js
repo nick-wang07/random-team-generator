@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { draftSequence } from '../src/draft.js';
+import { draftSequence, draftTeamSizes } from '../src/draft.js';
 
 test('alternating repeats the teams in order', () => {
   assert.deepEqual(draftSequence(2, 6, 'alternating'), [0, 1, 0, 1, 0, 1]);
@@ -38,4 +38,11 @@ test('every team gets its due share for any pick count', () => {
 
 test('an unknown order is rejected', () => {
   assert.throws(() => draftSequence(2, 4, 'spiral'), /unknown draft order/i);
+});
+
+test('draftTeamSizes counts the captain plus their picks', () => {
+  assert.deepEqual(draftTeamSizes(13, 2, 'snake'), [6, 7]);
+  assert.deepEqual(draftTeamSizes(13, 2, 'alternating'), [7, 6]);
+  assert.deepEqual(draftTeamSizes(14, 2, 'snake'), [7, 7]);
+  assert.deepEqual(draftTeamSizes(11, 3, 'snake'), [4, 4, 3]);
 });

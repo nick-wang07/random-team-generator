@@ -88,10 +88,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .draft-options hr { border: none; border-top: 1px solid var(--line); margin: 10px 0; }
 
 .start-buttons { display: flex; gap: 12px; margin-top: 16px; }
-/* Both live on .foot-status's single line, which is why neither carries a
-   margin. Toggling the error moved the panel foot, and subgrid passed that
-   straight to the ROSTER's scroll box on the far side of the screen. The row
-   reserves one line; the error drops into it without moving anything. */
+/* Preview and error share one always-present line, so showing an error
+   never changes the panel height. */
 .foot-status {
   display: flex; align-items: baseline; gap: 12px;
   min-height: 1lh; margin: 16px 0 0;
@@ -111,6 +109,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .team-column ul { list-style: none; margin: 0; padding: 0; }
 .team-column li { font-size: 24px; padding: 6px 0; }
 button.secondary { background: var(--line); color: var(--text); }
+button.secondary.is-armed { background: var(--danger); color: var(--bg); }
 
 .draft-pool { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0 24px; }
 .draft-pool button {
@@ -125,8 +124,8 @@ button.secondary { background: var(--line); color: var(--text); }
   .team-column li { font-size: 28px; }
 }
 
-/* Reveal card — the payoff moment. The wheel is deliberately NOT redrawn
-   until this closes, so it stays visibly stopped on the winner underneath. */
+/* Reveal card. The wheel is not redrawn until it closes, so it stays stopped
+   on the winner underneath. */
 .reveal-overlay {
   position: fixed; inset: 0; z-index: 10;
   display: flex; align-items: center; justify-content: center;
@@ -159,21 +158,17 @@ button.secondary { background: var(--line); color: var(--text); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Respect a reduced-motion preference: the card still appears, it just
-   doesn't spring. */
+/* Reduced motion: the card still appears, without the spring. */
 @media (prefers-reduced-motion: reduce) {
   .reveal-overlay, .reveal-card { animation: none; }
 }
 
-/* The run screen is what everyone watches on a screen share, so it has to fit
-   the window with no scrolling. The wheel keeps a fixed size — it is the point
-   of the screen and must not shrink as teams fill — so the team lists sit
-   either side of it rather than underneath, and the controls sit at the
-   bottom of the window. */
+/* The run screen fits the window with no scrolling: fixed-size wheel, team
+   lists either side, controls at the bottom. */
 #run-view:not([hidden]) {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 96px); /* main's 32px top + 64px bottom padding */
+  height: calc(100dvh - 96px);
   min-height: 0;
 }
 #run-view .turn-heading { flex: none; margin-bottom: 4px; }
@@ -186,12 +181,10 @@ button.secondary { background: var(--line); color: var(--text); }
   justify-content: center;
   gap: 24px;
 }
-/* Equal, flexible sides so the wheel stays centred in the window whatever the
-   team lists contain; the wheel itself never gives up space to them. */
+/* Equal sides keep the wheel centred whatever the team lists hold. */
 .team-side { flex: 1 1 0; min-width: 0; max-height: 100%; overflow-y: auto; }
 #run-view .wheel-wrap { flex: none; margin: 0; }
-/* Sized off the viewport, never off the surrounding content, so it holds
-   steady from the first spin to the last. */
+/* Sized off the viewport so it holds steady from the first spin to the last. */
 #run-view #wheel-canvas { width: min(600px, 34vw, 66vh); height: auto; }
 
 #run-view .team-columns { margin: 0; }
@@ -199,29 +192,18 @@ button.secondary { background: var(--line); color: var(--text); }
 #run-view .team-column h3 { font-size: 19px; margin: 0 0 6px; }
 #run-view .team-column li { font-size: 18px; line-height: 1.35; padding: 2px 0; }
 
-/* Pushed to the bottom of the window, centred under the wheel rather than
-   stranded in the corner. */
 #run-view #run-controls { flex: none; margin-top: auto; justify-content: center; }
 #run-view .shortcut-hint { flex: none; }
 
-/* The run screen wants the extra width for its flanking team lists; every
-   other view keeps the narrower reading measure. Browsers without :has()
-   simply get the 1100px column and slightly tighter sides. */
+/* Wider column for the run screen's flanking team lists. */
 main:has(#run-view:not([hidden])) { max-width: 1600px; }
 
-/* Only offer the affordance while there is a spin to cut short. */
 #wheel-canvas.is-spinning { cursor: pointer; }
 
-/* Mode choice: two cards, one of which is obviously the live one. The radio
-   itself is hidden but still focusable, so keyboard and screen readers get
-   the real control and everyone else gets the card. */
+/* Mode cards. The radio is visually hidden but still focusable. */
 .config-panel h2 { margin: 0 0 14px; }
 .mode-choice { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
-/* 180px, not the 260 this used to ask for: the config panel's column is 459px
-   wide, so a 260px basis could never fit two across and the pair silently
-   stacked — 192px of height for two cards that belong side by side. At 180 the
-   two share the column, and a phone-width window still wraps them back to
-   stacked, which is where stacking actually helps. */
+/* 180px lets two cards share the ~459px config column. */
 .mode-card { flex: 1 1 180px; cursor: pointer; }
 .mode-card input { position: absolute; opacity: 0; width: 0; height: 0; }
 .mode-card-face {
@@ -245,35 +227,17 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 .field-row { display: flex; align-items: center; gap: 12px; }
 .field-row label { font-size: 18px; }
 
-/* The two draft fieldsets sit side by side, each only as tall as the radios
-   it holds. They are deliberately NOT stretched to fill the panel's spare
-   height: a fieldset grown to 319px around two radio buttons is a box with
-   dead air in it, and centring the radios inside only moves the dead air
-   above and below them. The spare height belongs to the gap under the band,
-   where it costs nothing.
-
-   Nothing here moves the foot. The split preview and the start button live in
-   their own subgrid row pinned to the bottom of the panel, so they hold their
-   position whatever these boxes do. */
+/* The draft fieldsets sit side by side at their natural height; the foot is
+   pinned separately, so they never move it. */
 #draft-config { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
-/* `display: flex` above outranks the UA rule behind the hidden attribute, so
-   hiding it has to be said explicitly or the draft options never go away. */
+/* Needed because display: flex above overrides the hidden attribute. */
 #draft-config[hidden] { display: none; }
-/* Same 180px story as the mode cards above: at 260 the two fieldsets could
-   not fit the column and stacked, which was 304px of the 561px that used to
-   overflow the panel. */
+/* Same 180px basis as the mode cards. */
 #draft-config .draft-options { flex: 1 1 180px; margin: 18px 0 0; }
 #draft-config .roster-list { margin: 12px 0 0; }
 
-/* Setup in two columns: the roster on the left, everything about how to pick
-   on the right. With one column an eight-person roster pushed the start
-   button 1650px down a 900px window — you scrolled past your whole group to
-   start, every session. */
-/* Stretch, not start: the two panels are a matched pair, and letting each
-   find its own height left the shorter one stopping in mid-air against the
-   other. They fill the same row now and scroll whatever they cannot show,
-   so the pair reads as one composition in every mode — the wheel's short
-   options and the draft's long ones alike. */
+/* Setup: roster on the left, options on the right. */
+/* Stretch so the two panels are always the same height. */
 .setup-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -288,30 +252,21 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 }
 .panel-head h2 { margin: 0; }
 
-/* Reset lives under the add form, its left edge on the same line as the name
-   box above it. An outline rather than a bare link — as a link it read as
-   label text and nobody could tell it was clickable — but muted rather than
-   filled, because it is the only button here that throws the whole list away.
-   It turns red on approach, which is the only warning it gives. */
-/* The reset button and the undo notice share this row. Wrapping is allowed so
-   a long name in "Removed <name>." drops to its own line rather than pushing
-   the notice out past the panel edge. */
+/* Reset sits under the add form, left-aligned with it: an outline button,
+   muted, turning red on hover. */
+/* Wraps so a long "Removed <name>." notice stays inside the panel. */
 .panel-foot {
   display: flex; align-items: center; flex-wrap: wrap;
   justify-content: flex-start; gap: 12px; margin-top: 10px;
 }
-/* The quiet outline button: muted, but unmistakably a button. Used alone for a
-   plain secondary action, or with .reset-btn for a destructive one. */
+/* Muted outline button. Add .reset-btn for the destructive version. */
 .quiet-btn {
   background: none; color: var(--muted);
   border: 1px solid var(--line); border-radius: 8px;
   padding: 7px 13px; font-size: 15px;
 }
 .quiet-btn:hover, .quiet-btn:focus-visible { border-color: var(--muted); color: var(--text); }
-/* Red on approach is the only warning the reset gives, so it belongs to the
-   reset alone. "Choose captains…" borrowed .reset-btn for its look and
-   inherited the danger colour with it — a button that turns red on hover to
-   open a picker reads as though it is about to throw something away. */
+/* Red hover belongs to reset only. */
 .reset-btn:hover, .reset-btn:focus-visible {
   border-color: var(--danger); color: var(--danger);
 }
@@ -323,8 +278,7 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 }
 .link-btn:hover { text-decoration: underline; }
 
-/* The roster is the part that grows without bound, so it is the part that
-   scrolls — the page itself stays put. */
+/* The roster list scrolls; the page does not. */
 .roster-panel .roster-list {
   max-height: min(52vh, 560px);
   overflow-y: auto;
@@ -333,13 +287,11 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 
 .split-preview { color: var(--muted); margin: 0; font-size: 16px; white-space: nowrap; }
 
-/* Below roughly a laptop width the columns stop helping and stack. */
 @media (max-width: 900px) {
   .setup-columns { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Draft board, shaped like the wheel screen: teams either side, the pool you
-   act on in the middle, controls at the bottom. */
+/* Draft board: same shape as the wheel screen. */
 #draft-view:not([hidden]) {
   display: flex;
   flex-direction: column;
@@ -348,10 +300,7 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 }
 #draft-view .turn-heading { flex: none; margin-bottom: 8px; }
 #draft-view .run-stage { gap: 28px; align-items: stretch; }
-/* The sides get a definite width and the pool takes what is left. Left to
-   flex on its own the pool grew to fit its widest row and squeezed the team
-   columns down to a sliver — the wheel screen only works because the wheel
-   has a fixed width. */
+/* Fixed-width sides; otherwise the pool grows and squeezes the teams. */
 #draft-view .team-side {
   flex: 0 0 clamp(200px, 20%, 300px);
   display: flex; align-items: center;
@@ -364,8 +313,7 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 #draft-view #draft-controls { flex: none; margin-top: auto; justify-content: center; }
 #draft-view .team-columns { margin: 0; }
 
-/* The team on the clock. Everything about the board should answer "whose
-   turn is it?" without reading the heading. */
+/* The team whose turn it is. */
 .team-column.is-active {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, var(--panel));
@@ -375,12 +323,9 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
   font-size: 14px; font-weight: 600; letter-spacing: 0.04em;
   text-transform: uppercase; color: var(--muted);
 }
-/* Quiet, but relative to the muted text colour rather than the border
-   colour: --line sat almost exactly on the active column's tinted
-   background, so the highlighted team's slots rendered invisible. */
+/* Based on the muted text colour, so slots stay visible on the active column. */
 .slot-empty { color: color-mix(in srgb, var(--muted) 42%, transparent); }
 
-/* Pick order strip: past picks fade back, the current one is marked. */
 .order-strip { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
 .order-step {
   min-width: 30px; padding: 3px 8px; text-align: center;
@@ -395,34 +340,23 @@ main:has(#run-view:not([hidden])) { max-width: 1600px; }
 
 main:has(#draft-view:not([hidden])) { max-width: 1600px; }
 
-/* Results: the payoff, so it gets the weight of a finished thing rather than
-   the same small heading as a form section.
-
-   Bounded to the window rather than allowed to grow past it, so the buttons
-   are always reachable. The team boxes take only the room they need and the
-   buttons sit straight underneath them; when the teams are long enough to run
-   out of window, the boxes give up the extra height instead and each one
-   scrolls its own list, which leaves the buttons resting on the bottom of the
-   screen. One layout, both cases — there is no height at which the buttons
-   get pushed out of reach. */
+/* Results. Bounded to the window so the buttons stay reachable: long teams
+   scroll inside their own boxes instead. */
 #results-view:not([hidden]) {
   display: flex; flex-direction: column;
-  height: calc(100dvh - 96px); /* main's 32px top + 64px bottom padding */
+  height: calc(100dvh - 96px);
   min-height: 0;
 }
 .results-heading { font-size: 40px; margin: 0 0 4px; flex: none; }
 .results-summary { color: var(--muted); margin: 0 0 24px; font-size: 18px; flex: none; }
-/* Shrink but never grow: short teams stay their natural height with the
-   buttons right below them. `overflow-y` only ever engages with enough teams
-   to wrap onto a second row — on one row the columns scroll themselves. */
+/* Shrink but never grow. overflow-y only matters once the teams wrap to a
+   second row. */
 #results-view .team-columns {
   margin-top: 0;
   flex: 0 1 auto; min-height: 0; overflow-y: auto;
 }
-/* A column is a heading that stays put over a list that scrolls under it.
-   The max-height is what makes that happen: a flex line takes its tallest
-   item's natural height, so without it the columns simply grow past the row
-   and the whole row scrolls instead, taking the team headings with it. */
+/* Heading stays put while the list scrolls. Without the max-height the
+   whole row would scroll instead. */
 #results-view .team-column {
   padding: 20px 22px;
   display: flex; flex-direction: column; min-height: 0; max-height: 100%;
@@ -432,53 +366,36 @@ main:has(#draft-view:not([hidden])) { max-width: 1600px; }
 #results-view .start-buttons { flex: none; justify-content: center; padding-top: 28px; }
 main:has(#results-view:not([hidden])) { max-width: 1400px; }
 
-/* Focus lands on a view's heading when the view changes; it should be a
-   waypoint for keyboard users, not a visible box around a title. */
+/* Focused headings are keyboard waypoints, not outlined boxes. */
 [tabindex="-1"]:focus { outline: none; }
 
-/* Sits on the reset button's row, so it carries no margin of its own and
-   min-width: 0 lets its text wrap inside the row instead of forcing the row
-   wider than the panel. */
+/* min-width: 0 lets the notice wrap inside the reset button's row. */
 .removal-notice {
   display: flex; align-items: baseline; gap: 10px;
   min-width: 0; margin: 0; color: var(--muted); font-size: 15px;
 }
 
-/* Captains, as the panel shows them: the names that have been picked, and the
-   way back into the dialog. The inline checkbox list this replaced put a
-   scrolling roster inside an already-scrolling panel. */
 .captain-summary { margin: 12px 0 0; }
 .captain-names { margin: 0 0 10px; font-size: 16px; }
 .captain-names.is-empty { color: var(--muted); font-style: italic; }
 
-/* On the wheel screen the highlighted team is not choosing anyone — it is
-   the team this spin will fill — so it gets its own wording. */
 #run-view .team-column.is-active h3::after { content: ' · up next'; }
 
-/* Quiet hint for the two things that are not visible affordances. */
 .shortcut-hint {
   flex: none; margin: 10px 0 0; text-align: center;
   color: var(--muted); font-size: 14px;
 }
 
-/* Bound the whole setup area to the window and let each panel scroll inside
-   itself. Capping individual lists only fixed the modes I remembered to
-   test — choosing captains still pushed the page over. This holds for every
-   combination of roster size and mode, including ones added later. */
+/* The setup area is bounded to the window; each panel scrolls inside itself. */
 #setup-view:not([hidden]) {
   display: flex;
   flex-direction: column;
   height: calc(100dvh - 96px);
   min-height: 0;
 }
-/* Centred over a symmetrical pair of panels. This is the one screen with a
-   product title rather than a status heading, so it gets to sit like one. */
 #setup-view h1 { flex: none; text-align: center; }
 #setup-view .storage-notice, #setup-view > .notice { text-align: center; }
-/* Shrink but never grow: the pair is only as tall as its tallest content, and
-   drops to whatever the window allows if that is less. Filling the window
-   instead left the wheel's handful of options rattling around in a panel
-   twice the height it needed. */
+/* As tall as the taller panel's content, or the window if that is smaller. */
 #setup-view .setup-columns { flex: 0 1 auto; min-height: 0; max-height: 100%; }
 #setup-view .roster-panel,
 #setup-view .config-panel {
@@ -486,9 +403,7 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
   overflow-y: auto;
 }
 
-/* Both panels are three bands: a head that stays put, a region that scrolls,
-   and a foot that stays put. Scrolling to find "Start" is the thing this
-   layout exists to prevent, and the same goes for the add box on the left. */
+/* Each panel: fixed head, scrolling middle, fixed foot, so Start is always visible. */
 #setup-view .roster-panel,
 #setup-view .config-panel {
   display: flex; flex-direction: column; overflow: hidden;
@@ -496,50 +411,28 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
 #setup-view .roster-panel .panel-head,
 #setup-view .config-panel > h2,
 #setup-view .panel-foot-group { flex: none; }
-/* The heading's bottom margin matches .panel-head's on the left, so both
-   scrolling regions start on the same line. */
+/* Matches .panel-head so both scroll regions start on the same line. */
 #setup-view .config-panel > h2 { margin: 0 0 10px; }
-/* Each fills its panel, but never past the cap that decides how tall the pair
-   gets to be, so neither panel can drag the pair taller than the other.
-
-   Both of them get overflow-y spelled out here. The roster list also picks it
-   up from its own base rule, which is how dropping it from this pair once left
-   the config panel silently overflowing its box instead of scrolling: the left
-   side still worked, so the pair looked fine at a glance. */
+/* Both need overflow-y here; the config panel silently overflowed once
+   when it was missing. */
 #setup-view .roster-panel .roster-list,
 #setup-view .config-scroll {
   flex: 1 1 auto; min-height: 0;
   overflow-y: auto;
 }
-/* The cap is the roster's alone. It is the list that grows without bound, so
-   it is the list that needs a ceiling; the config panel's options are a fixed
-   set and now fit the shared row on their own. Applied to both, the cap was
-   simply the thing putting a scrollbar on the draft options — it cut the box
-   to 512px on a 945px-tall window while the content wanted 561. Config keeps
-   overflow-y above as a safety net for a very short window. */
+/* Only the roster, which grows without bound, gets a height cap. */
 #setup-view .roster-panel .roster-list { max-height: min(56vh, 600px); }
 #setup-view .panel-foot-group { margin-top: auto; }
-/* The spacing under a scrolling region belongs to the foot, not to the region
-   itself. As a margin on the roster list only, it made that box 16px shorter
-   than its neighbour whenever the two actually stretched to fill their shared
-   row — which is every window small enough to squeeze the panels. */
+/* The gap under a scroll region is on the foot, so both regions stay equal. */
 #setup-view .roster-panel .roster-list,
 #setup-view .config-scroll { margin-bottom: 0; }
 #setup-view .config-panel .foot-status { margin-top: 0; }
 #setup-view .panel-foot-group { padding-top: 16px; }
 
-/* The two feet hold different things — an add box and a reset button on the
-   left, a preview, an error line and a start button on the right — so left to
-   themselves they are different heights, and the scrolling region above the
-   shorter one runs on further down the panel than its neighbour. Subgrid puts
-   all six bands on three shared rows, so the two scroll boxes begin and end on
-   exactly the same lines whatever their feet contain. Browsers without it fall
-   back to the flex rules above: aligned at full height, drifting by the
-   difference in the feet only once the window squeezes the panels. */
+/* Subgrid puts both panels' head, scroll region and foot on three shared
+   rows, so the scroll regions line up whatever the feet contain. */
 @supports (grid-template-rows: subgrid) {
-  /* Only while the two are actually side by side. Below this the columns
-     stack, and pinning both panels to rows 1-3 would sit them on top of each
-     other. Stacked, there is nothing to align them to anyway. */
+  /* Only side by side; stacked panels have nothing to line up with. */
   @media (min-width: 901px) {
     #setup-view .setup-columns { grid-template-rows: auto minmax(0, 1fr) auto; }
     #setup-view .roster-panel,
@@ -552,9 +445,7 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
   }
 }
 
-/* The captain picker. Sized to its content up to a cap, so a fourteen-person
-   roster and a four-person one both look deliberate rather than one being a
-   sliver and the other a wall. */
+/* Captain picker: sized to its content, up to a cap. */
 .captain-dialog {
   background: var(--panel);
   color: var(--text);
@@ -572,8 +463,6 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
 }
 .captain-dialog-head h2 { margin: 0; }
 .captain-dialog-count { margin: 0; color: var(--muted); font-size: 15px; white-space: nowrap; }
-/* The one place a scrollbar is welcome: it is the dialog's own list, not a
-   list nested inside another scrolling box. */
 .captain-chips {
   display: flex; flex-wrap: wrap; gap: 10px;
   padding: 0 22px 4px; overflow-y: auto; min-height: 0;
@@ -593,7 +482,6 @@ main:has(#results-view:not([hidden])) { max-width: 1400px; }
   border-color: var(--accent); color: var(--accent); font-weight: 600;
   background: color-mix(in srgb, var(--accent) 14%, var(--bg));
 }
-/* Disabled means "the set is full", not "this person is ineligible" — so it
-   fades rather than looking broken, and the chosen chips stay bright. */
+/* Disabled = the set is full, so fade rather than look broken. */
 .captain-chip:disabled { opacity: 0.4; cursor: not-allowed; }
 

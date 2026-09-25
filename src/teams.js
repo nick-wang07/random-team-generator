@@ -8,8 +8,7 @@ export function teamSizes(n, k) {
   return Array.from({ length: k }, (_, i) => base + (i < extra ? 1 : 0));
 }
 
-// A, B, A, B, ... fills exactly the sizes above, because the remainder is
-// front-loaded onto the same teams the rotation reaches first.
+// A, B, A, B, ... fills exactly the sizes above.
 export function pickRotation(n, k) {
   return Array.from({ length: n }, (_, i) => i % k);
 }
@@ -35,12 +34,8 @@ export function validateSetup({ presentCount, teamCount }) {
   return { ok: true };
 }
 
-// Toggle one person in or out of the captain set, refusing to grow it past
-// `limit`. Returns a new array; never mutates the one it is handed.
-//
-// Removal is always allowed, including when the set is already full — the
-// picker disables the unchosen chips at the limit, so if removal were blocked
-// too a complete set would be frozen with no way back.
+// Toggles one person in or out of the captains, never growing past `limit`.
+// Removal is always allowed, even over the limit.
 export function toggleCaptain(captains, id, limit) {
   if (captains.includes(id)) return captains.filter((x) => x !== id);
   if (captains.length >= limit) return captains;

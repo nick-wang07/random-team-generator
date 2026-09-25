@@ -12,7 +12,7 @@
     <section id="setup-view" class="view">
       <h1>Team Generator</h1>
       <p id="storage-notice" class="notice" hidden>
-        Saving is turned off in this browser, so your roster will not survive a refresh.
+        Saving is turned off in this browser, so the team count and pick order reset on refresh.
       </p>
 
       <div class="setup-columns">
@@ -30,12 +30,6 @@
             <input id="name-input" type="text" placeholder="Add a name" autocomplete="off">
             <button id="add-btn" type="submit">Add</button>
           </form>
-          <!-- The undo notice shares the reset button's line. It used to have a
-               line of its own above the add form, which meant the left foot grew
-               by a whole row the moment you removed someone — and since subgrid
-               sizes both panels' scroll boxes off the feet, both boxes jumped
-               shorter. Sharing this row, the foot is the same height whether the
-               notice is showing or not. -->
           <div class="panel-foot">
             <button id="reset-roster-btn" type="button" class="quiet-btn reset-btn">Reset to default list</button>
             <p id="removal-notice" class="removal-notice" hidden></p>
@@ -44,9 +38,6 @@
       </div>
 
       <div class="config-panel">
-        <!-- The heading sits OUTSIDE .config-scroll, matching the roster
-             panel's head: it stays put while the options scroll under it, and
-             the two panels' scroll boxes start and end on the same lines. -->
         <h2>How are you picking teams?</h2>
         <div class="config-scroll">
           <div class="mode-choice">
@@ -81,10 +72,7 @@
               <legend>Captains</legend>
               <label><input type="radio" name="captain-mode" value="spin" checked> Spin for them</label>
               <label><input type="radio" name="captain-mode" value="choose"> Choose them</label>
-              <!-- Choosing happens in a dialog, not here. Inline, the roster was
-                   a scrolling checkbox list nested inside an already-scrolling
-                   panel, which is two scrollbars for one gesture. What is left
-                   in the panel is the answer, not the picker. -->
+              <!-- Dialog, not an inline list, to avoid a scroll box inside a scroll box. -->
               <div id="captain-summary" class="captain-summary" hidden>
                 <p id="captain-names" class="captain-names"></p>
                 <button id="choose-captains-btn" type="button" class="quiet-btn">Choose captains…</button>
@@ -94,11 +82,7 @@
 
         </div>
         <div class="panel-foot-group">
-          <!-- The preview and the error share one line. Neither is ever hidden,
-               so this row is exactly one line tall whether or not there is an
-               error to show, and the foot never changes height. Giving the
-               error a line of its own — even a permanently reserved one — cost
-               ~30px of panel height for a line that is blank most of the time. -->
+          <!-- Preview and error share one line, so the foot never changes height. -->
           <div class="foot-status">
             <p id="split-preview" class="split-preview"></p>
             <p id="setup-error" class="error" role="alert"></p>
@@ -125,9 +109,7 @@
       <p class="shortcut-hint">Space to spin · click the wheel to skip the spin</p>
     </section>
 
-    <!-- Lives outside every view section on purpose: the last captain spin
-         hides #run-view as it routes to the draft board, and anything inside
-         it would be hidden along with it before it could be read. -->
+    <!-- Outside the views: the last captain spin hides #run-view while this is up. -->
     <div id="reveal-overlay" class="reveal-overlay" hidden>
       <div id="reveal-card" class="reveal-card" role="status" aria-live="polite">
         <button type="button" id="reveal-close" class="reveal-close" aria-label="Close">&times;</button>
@@ -135,9 +117,6 @@
         <p id="reveal-team" class="reveal-team"></p>
       </div>
     </div>
-    <!-- Native <dialog>, so focus trapping, Escape and the backdrop come from
-         the platform rather than being reimplemented. Lives outside the view
-         sections for the same reason the reveal card does. -->
     <dialog id="captain-dialog" class="captain-dialog">
       <form method="dialog" class="captain-dialog-form">
         <div class="captain-dialog-head">

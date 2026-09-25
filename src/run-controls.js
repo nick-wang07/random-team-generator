@@ -1,13 +1,11 @@
-import { undoPick } from './run.js';
+import { undoPick, canUndo } from './run.js';
 
-// The two buttons every run screen ends with — the wheel, the draft board and
-// the results all use these. `isBusy()` reports whether a spin or a reveal is
-// in flight: whatever is in flight owns the run until it lands, and neither
-// button may pull the state out from under it.
+// Undo and "Back to setup", shared by every run screen. Both do nothing while
+// a spin or reveal is in flight (`isBusy`).
 export function createRunControls({ state, render, isBusy }) {
   function undoLast() {
     if (isBusy()) return;
-    if (!state.run || state.run.history.length === 0) return;
+    if (!state.run || !canUndo(state.run)) return;
     state.run = undoPick(state.run);
     render();
   }
@@ -18,7 +16,7 @@ export function createRunControls({ state, render, isBusy }) {
       undo.type = 'button';
       undo.className = 'secondary';
       undo.textContent = 'Undo last pick';
-      undo.disabled = state.run.history.length === 0;
+      undo.disabled = !canUndo(state.run);
       undo.addEventListener('click', undoLast);
       container.append(undo);
     },

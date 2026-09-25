@@ -1,10 +1,6 @@
 function defaultMakeId() {
-  // crypto.randomUUID() requires a secure context (https:, or localhost).
-  // It's fine on GitHub Pages and on localhost, but a host who serves this
-  // folder and opens it from another machine on the LAN (http://192.168.x.x)
-  // gets a throw on every add. Ids only need to be unique within one roster
-  // and are never security-relevant, so fall back to a timestamp plus a
-  // random suffix rather than requiring a secure context.
+  // randomUUID() only exists in a secure context (https or localhost). Ids
+  // just need to be unique within the roster, so fall back to something simple.
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
@@ -51,8 +47,7 @@ export function findPerson(roster, id) {
   return roster.find((p) => p.id === id);
 }
 
-// A name to show on screen for an id. Every view needs this and none of them
-// should decide for itself what an id with no person behind it looks like.
+// The name to show for an id, with one placeholder for an unknown id.
 export function displayName(roster, id) {
   return findPerson(roster, id)?.name ?? '(unknown)';
 }

@@ -1,9 +1,7 @@
 export const STORAGE_KEY = 'rtg.v1';
 
-// The regulars, so the app is usable the moment it opens instead of starting
-// on an empty list. Ids are slugs rather than random, so they stay stable and
-// readable in storage. The roster is intentionally session-only: each page
-// load starts with the current list below, with everyone selected.
+// The regulars. The roster is not saved: every page load starts from this
+// list with everyone ticked. Only the team count and draft order persist.
 const DEFAULT_NAMES = [
   'Andrew', 'Brandon', 'Brennan', 'Chase', 'Chin', 'Colten', 'Craig',
   'Isaiah', 'Jordan', 'Major', 'Nick', 'Nikhil', 'Walter', 'Wyatt',
@@ -24,16 +22,13 @@ function defaults() {
 
 export const DEFAULT_STATE = Object.freeze(defaults());
 
-// A fresh copy of the seed roster, for the "Reset to default list" button.
-// Built anew on every call rather than handing out DEFAULT_STATE's arrays,
-// which callers would then be free to mutate out from under everyone else.
+// A fresh copy of the default roster, for "Reset to default list".
 export function defaultRosterState() {
   const { roster, present } = defaults();
   return { roster, present };
 }
 
-// Returns localStorage when it is usable, or null in a private window where
-// touching it throws. Callers use the null to show a "nothing will be saved" notice.
+// localStorage, or null where using it throws (e.g. some private windows).
 export function browserBackend() {
   try {
     const probe = '__rtg_probe__';

@@ -1,11 +1,10 @@
 import { el } from './dom.js';
 import { displayName } from './roster.js';
 import { validateSetup, teamSizes } from './teams.js';
+import { draftTeamSizes } from './draft.js';
 
-// The setup screen's right-hand column: how many teams, which mode, the
-// captain options, and the two start buttons. The roster panel down the left
-// is its own module; this one only borrows `openEditorError()` from it, to
-// know whether the shared error line is already spoken for.
+// The setup screen's right-hand column: team count, mode, captain options
+// and the start buttons. The roster panel is its own module.
 export function createSetupView({
   state, render, persist, rosterPanel, captainPicker, showError, onStartWheel, onStartDraft,
 }) {
@@ -24,8 +23,7 @@ export function createSetupView({
     return { ok: true };
   }
 
-  // What the panel shows for "Choose them" is the answer, not the picker: who
-  // is currently a captain, and a way back into the dialog to change it.
+  // For "Choose them": who the captains are, plus a button to change them.
   function renderCaptainSummary() {
     const choosing = state.config.captainMode === 'choose';
     el('captain-summary').hidden = !choosing;
@@ -34,8 +32,6 @@ export function createSetupView({
     el('captain-names').textContent = names.length
       ? names.join(', ')
       : 'No captains chosen yet';
-    // Muted while empty so the panel does not read as though something is
-    // already settled when nothing has been picked.
     el('captain-names').classList.toggle('is-empty', names.length === 0);
   }
 
@@ -47,13 +43,14 @@ export function createSetupView({
     });
   });
 
-  // "2 teams of 4", or "3 teams: 4, 3, 3" when it does not divide evenly, so
-  // the host can sanity-check the team count before committing to it.
+  // "2 teams of 4", or "3 teams: 4, 3, 3" for an uneven split.
   function splitPreview() {
     const present = state.present.length;
     const teamCount = state.config.teamCount;
     if (!validateSetup({ presentCount: present, teamCount }).ok) return '';
-    const sizes = teamSizes(present, teamCount);
+    const sizes = state.config.pickMode === 'draft'
+      ? draftTeamSizes(present, teamCount, state.config.draftOrder)
+      : teamSizes(present, teamCount);
     return sizes.every((n) => n === sizes[0])
       ? `${teamCount} teams of ${sizes[0]}`
       : `${teamCount} teams: ${sizes.join(', ')}`;
@@ -61,11 +58,7 @@ export function createSetupView({
 
   el('team-count').addEventListener('input', () => {
     const raw = el('team-count').value;
-    // An empty field (host clearing the box to retype) is not "0 teams" — bail
-    // out without persisting or re-rendering so the host can keep typing.
-    // renderSetup() would otherwise write "0" straight back into the field on
-    // the next render, and a refresh mid-edit would reopen the app looking
-    // broken with 0 teams saved.
+    // Ignore an empty field while the host retypes, rather than saving 0 teams.
     if (raw === '') return;
     state.config.teamCount = Number(raw);
     persist();
@@ -76,8 +69,7 @@ export function createSetupView({
     radio.checked = radio.value === state.config.pickMode;
     radio.addEventListener('change', () => {
       state.config.pickMode = radio.value;
-      // Leaving the draft behind drops any half-made captain selection, so
-      // coming back to it starts clean rather than half-filled from before.
+      // Leaving draft mode drops any half-chosen captains.
       if (radio.value !== 'draft') state.captains = [];
       render();
     });
@@ -106,7 +98,7 @@ export function createSetupView({
 
   return {
     render() {
-      // Drop any captain who is no longer present (unchecked from the roster).
+      // Drop captains who are no longer ticked.
       state.captains = state.captains.filter((id) => state.present.includes(id));
 
       rosterPanel.render();
@@ -116,14 +108,11 @@ export function createSetupView({
         presentCount: state.present.length,
         teamCount: state.config.teamCount,
       });
-      // An unresolved editor error takes priority over the team-count message so
-      // an incidental re-render (checkbox, add, team count) doesn't erase it.
+      // An open rename error wins over the setup validation message.
       const editorError = rosterPanel.openEditorError();
       showError(editorError ?? (check.ok ? '' : check.reason));
 
-      // Everything specific to the draft — pick order and the captain options —
-      // stays out of sight until the draft is the chosen mode, and only the
-      // start button for the chosen mode is offered.
+      // Draft options and the draft start button only show in draft mode.
       const drafting = state.config.pickMode === 'draft';
       el('draft-config').hidden = !drafting;
       el('start-wheel-btn').hidden = drafting;
@@ -134,9 +123,6 @@ export function createSetupView({
       el('start-wheel-btn').disabled = !check.ok;
       const draftCheck = validateDraftSetup();
       el('start-draft-btn').disabled = !draftCheck.ok;
-      // Same priority as above: an unresolved editor error must not be clobbered
-      // by the draft-specific message on an incidental re-render either. The
-      // draft's own complaint is only relevant while the draft is on screen.
       if (drafting && check.ok && !draftCheck.ok && !editorError) {
         showError(draftCheck.reason);
       }

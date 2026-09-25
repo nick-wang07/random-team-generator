@@ -1,8 +1,7 @@
 import { findPerson } from './roster.js';
 
 // Sharing a team with a Walt is its own punishment. Matches Walt, Walter,
-// Walker, Walteezer, Waltezzer and any future spelling that keeps the front
-// of the name intact.
+// Walker and any spelling that keeps the front of the name.
 const WALT = /^wal[tk]/i;
 
 export function isWalt(name) {
@@ -13,8 +12,7 @@ export function teamHasWalt(memberIds, roster) {
   return memberIds.some((id) => isWalt(findPerson(roster, id)?.name));
 }
 
-// The Walt himself is spared — he is not on a team with a Walt, everyone
-// else is.
+// The Walt himself is spared.
 export function commiserate(name, hasWalt) {
   return hasWalt && !isWalt(name) ? `${name} 😭` : name;
 }

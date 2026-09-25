@@ -13,3 +13,11 @@ export function draftSequence(teamCount, pickCount, order) {
   }
   return sequence;
 }
+
+// Final team sizes for a captain draft. Unlike teamSizes(), snake order can
+// give the extra player to a later team.
+export function draftTeamSizes(peopleCount, teamCount, order) {
+  const sizes = new Array(teamCount).fill(1);
+  for (const t of draftSequence(teamCount, peopleCount - teamCount, order)) sizes[t] += 1;
+  return sizes;
+}

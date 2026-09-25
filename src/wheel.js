@@ -1,44 +1,26 @@
 const TAU = Math.PI * 2;
 const toRad = (deg) => (deg * Math.PI) / 180;
 
-// Slice colours: the whole hue circle at low chroma, with lightness
-// alternating so neighbours separate by brightness as well as hue.
-//
-// The wheel used to be `hsl(hue 62% 46%)` — one HSL lightness for every hue.
-// HSL lightness is not perceptual, so actual luminance ran from 0.076 (blue)
-// to 0.434 (yellow-green), a 5.7x spread: some slices glared and others sank.
-// Worse, every label was painted dark regardless, leaving 7 of 14 slices below
-// WCAG AA. The names on the blues were the ones nobody could read.
-//
-// OKLCH is perceptually uniform, so a fixed lightness really is a fixed
-// brightness. The alternation is deliberately wide: 0.50/0.58 measured
-// beautifully even and STILL failed AA on five slices, because perfect
-// evenness parks every slice in the mid zone where neither black nor white
-// text is comfortable. 0.46/0.64 gives every slice a text colour at 5.3:1 or
-// better, which is the whole point of alternating rather than flattening.
+// Slice colours: the full hue circle in OKLCH at low chroma, lightness
+// alternating between two values so neighbours differ in brightness too.
+// OKLCH keeps brightness even across hues (HSL did not), and 0.46/0.64 lets
+// every label clear WCAG AA with one of the two text colours.
 const DARK_TEXT = '#0f1116';
 const LIGHT_TEXT = '#f2f4f8';
 const DARK_SLICE = 0.46;
 const LIGHT_SLICE = 0.64;
-// Only used at an odd count's wrap-around, below. Deliberately darker than
-// DARK_SLICE rather than a midpoint between the two: a true midpoint (0.55)
-// sat in the zone where neither text colour is comfortable and measured 4.42:1
-// at n=3, the one slice in the whole scheme to miss AA. Going darker instead of
-// brighter keeps it discreet — a slice brighter than every other would read as
-// a highlight and imply a meaning the wheel does not have.
+// A third lightness for the last slice of an odd count (see below). Darker
+// rather than a midpoint, which failed AA, or brighter, which reads as a
+// highlight.
 const MID_SLICE = 0.34;
 
-// Returns the slice fill and the text colour that survives on it. Text follows
-// the slice's own lightness rather than being measured back off the canvas.
+// The slice fill and a text colour readable on it.
 function sliceColor(index, total) {
   const n = Math.max(total, 1);
   const hue = (360 / n) * index + 20;
-  // With an odd count the alternation wraps onto itself: the last slice and
-  // the first are both "dark" and sit side by side, so that one seam loses the
-  // brightness cue every other pair gets. A third lightness there differs from
-  // both of its neighbours. The count is the number of names still on the
-  // wheel, so it drops by one per spin — half of every game is an odd count,
-  // and this is not a rare edge.
+  // With an odd count the first and last slices would both be dark and
+  // adjacent, so the last one gets its own lightness. The count drops by one
+  // per spin, so this happens every other spin.
   let lightness;
   if (n % 2 === 1 && index === n - 1) lightness = MID_SLICE;
   else lightness = index % 2 ? LIGHT_SLICE : DARK_SLICE;
@@ -96,12 +78,7 @@ export function createWheel(canvas) {
     }
 
     const sliceAngle = 360 / labels.length;
-    // Cap and per-label budget both scale down with the wheel's actual
-    // radius, not just the label count — at the reference 600px canvas
-    // (radius 270) this reproduces the original max(14, min(28, 520/n))
-    // exactly; on the narrower canvases the responsive CSS width allows
-    // (down to ~320px, radius ~130) it shrinks further so long names stop
-    // overrunning the hub.
+    // Font size scales with both the radius and the label count.
     const radiusScale = radius / 270;
     const fontSize = Math.max(14, Math.min(28 * radiusScale, (520 * radiusScale) / labels.length));
 
@@ -117,20 +94,13 @@ export function createWheel(canvas) {
       ctx.closePath();
       ctx.fillStyle = fill;
       ctx.fill();
-      // A hairline of light rather than a 2px gouge of near-black: the dark
-      // divider read as a crack between slices at any size.
+      // A faint light divider; a dark one read as a crack.
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Text runs along the middle of the slice, reading outward. This does
-      // not change slice geometry at all — `start`/`end` above are untouched
-      // — it only changes which way the label text is drawn. A slice whose
-      // midpoint falls on the wheel's left half would otherwise render its
-      // label upside down (screen-shared, half the names would read
-      // backwards), so those get an extra 180° rotation, with the anchor and
-      // alignment mirrored to match, keeping every label reading
-      // left-to-right all the way around.
+      // Labels run outward along the slice's middle. Those on the left half are
+      // turned 180° so no name reads upside down.
       const midAngleDeg = rotation + (i + 0.5) * sliceAngle - 90;
       const normalizedMid = ((midAngleDeg % 360) + 360) % 360;
       const flipped = normalizedMid > 90 && normalizedMid < 270;
@@ -146,7 +116,6 @@ export function createWheel(canvas) {
       ctx.restore();
     });
 
-    // Rim, so the wheel sits on the background instead of floating over it.
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, TAU);
     ctx.strokeStyle = '#2f3442';
@@ -176,12 +145,7 @@ export function createWheel(canvas) {
 
   function spinTo(stopAngleDeg, durationMs = SPIN_MS) {
     if (spinning) {
-      // Refuse rather than touch the in-flight spin: resolving or cancelling
-      // someone else's promise on their behalf is exactly how a second
-      // caller (e.g. a future captain-draft spin) could apply a pick whose
-      // animation never actually landed. app.js's spinOnce() already checks
-      // isSpinning() before calling, so this path is unreachable there — it
-      // exists so wheel.js defends its own invariant no matter who calls it.
+      // Refuse rather than disturb the spin already in flight.
       return Promise.reject(new Error('spinTo called while already spinning'));
     }
 
@@ -192,10 +156,7 @@ export function createWheel(canvas) {
     return new Promise((resolve) => {
       const started = performance.now();
 
-      // Lands the spin on the angle it was always going to stop at. Whether
-      // it gets here by running out of time or by someone cutting it short,
-      // the resting angle is identical — the winner was drawn before any of
-      // this started and nothing here can move it.
+      // Lands on the planned angle, whether the spin ran out or was cut short.
       function settle() {
         // Normalise so the next spin's 4-to-6 turns start from a small angle.
         rotation = ((stopAngleDeg % 360) + 360) % 360;
@@ -207,8 +168,7 @@ export function createWheel(canvas) {
         resolve();
       }
 
-      // Resolves THIS spin's own promise, never another caller's — that
-      // distinction is what keeps `finish` safe where superseding was not.
+      // Cuts this spin short.
       finishActive = () => {
         if (frameId !== null) cancelAnimationFrame(frameId);
         settle();
@@ -228,8 +188,7 @@ export function createWheel(canvas) {
     });
   }
 
-  // Cuts the current spin short. A no-op when nothing is spinning, so callers
-  // can wire it straight to a click without guarding.
+  // Cuts the current spin short; a no-op when nothing is spinning.
   function finish() {
     if (finishActive) finishActive();
   }

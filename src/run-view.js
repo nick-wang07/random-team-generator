@@ -4,9 +4,9 @@ import { teamLabel } from './teams.js';
 import { randomIndex, planSpin } from './rng.js';
 import { applyPick, currentTeamIndex, picksRemaining } from './run.js';
 import { renderFlanks, equaliseTeamHeights } from './team-board.js';
+import { draftTeamSizes } from './draft.js';
 
-// The wheel screen. Owns the one thing in this app that has to be exactly
-// right — the order in which a pick is drawn, animated, revealed and applied.
+// The wheel screen. The order matters: draw the winner, animate, reveal, apply.
 export function createRunView({ state, render, wheel, reveal, controls }) {
   function setControlsEnabled(enabled) {
     for (const button of el('run-controls').querySelectorAll('button')) {
@@ -20,8 +20,7 @@ export function createRunView({ state, render, wheel, reveal, controls }) {
     const winnerIndex = randomIndex(state.run.pool);
     const winnerId = state.run.pool[winnerIndex];
     const teamName = teamLabel(currentTeamIndex(state.run));
-    // A one-slice wheel is the whole disc: there is no suspense left to build
-    // and spinning it just costs everyone four seconds. Straight to the card.
+    // One slice left: nothing to spin for, go straight to the card.
     const lastOne = state.run.pool.length === 1;
 
     setControlsEnabled(false);
@@ -29,14 +28,11 @@ export function createRunView({ state, render, wheel, reveal, controls }) {
       if (!lastOne) {
         await wheel.spinTo(planSpin(state.run.pool.length, winnerIndex).stopAngleDeg);
       }
-      // Held open before the pick is applied: render() redraws the wheel without
-      // the winner, so applying first would erase the slice everyone is looking
-      // at. The wheel stays stopped on them for as long as the card is up.
+      // Reveal before applying the pick: render() would remove the winner's
+      // slice while everyone is still looking at it.
       await reveal.show(displayName(state.roster, winnerId), teamName);
     } finally {
-      // Restored on every path, including a rejected/aborted spin, so a
-      // failure never leaves the controls stuck disabled with the winner
-      // already drawn but nowhere applied.
+      // Re-enabled on every path, even if the spin fails.
       setControlsEnabled(true);
     }
 
@@ -72,12 +68,14 @@ export function createRunView({ state, render, wheel, reveal, controls }) {
         rightNode: el('run-teams-right'),
         run: state.run,
         roster: state.roster,
+        slots: state.run.mode === 'captains'
+          ? draftTeamSizes(state.present.length, state.run.teams.length, state.config.draftOrder)
+          : null,
       });
       equaliseTeamHeights(el('run-view'));
 
-      // Sized last, once the controls and the team columns are in the DOM:
-      // measuring before its neighbours exist gives the canvas a backing store
-      // that doesn't match the size it ends up displayed at.
+      // Size the canvas last, once its neighbours are in the DOM, or its backing
+      // store won't match its displayed size.
       wheel.resize();
       wheel.draw();
     },
