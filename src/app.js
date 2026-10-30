@@ -32,7 +32,7 @@ state.config.pickMode = state.config.pickMode ?? 'wheel';
 state.captains = [];
 
 function persist() {
-  store.save({ roster: state.roster, present: state.present, config: state.config });
+  store.save({ config: state.config });
 }
 
 // The error line is never hidden, so showing one does not resize the panels.

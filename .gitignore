@@ -1,6 +1,5 @@
 node_modules/
 .DS_Store
-.superpowers/
 
 # Planning and process artifacts — kept locally, not published
 docs/

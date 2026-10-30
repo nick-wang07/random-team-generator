@@ -1,4 +1,4 @@
-export const DRAFT_ORDERS = ['snake', 'alternating'];
+const DRAFT_ORDERS = ['snake', 'alternating'];
 
 export function draftSequence(teamCount, pickCount, order) {
   if (!DRAFT_ORDERS.includes(order)) {

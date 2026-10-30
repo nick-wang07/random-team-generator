@@ -1,6 +1,6 @@
 export const SLICE_PAD = 0.1;
-export const MIN_FULL_SPINS = 4;
-export const MAX_FULL_SPINS = 6;
+const MIN_FULL_SPINS = 4;
+const MAX_FULL_SPINS = 6;
 
 export function randomInt(maxExclusive, source = Math.random) {
   return Math.floor(source() * maxExclusive);

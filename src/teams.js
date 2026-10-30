@@ -1,4 +1,4 @@
-export const MIN_TEAMS = 2;
+const MIN_TEAMS = 2;
 export const MAX_TEAMS = 8;
 
 // Everyone gets floor(n / k); the first n % k teams get one extra.
